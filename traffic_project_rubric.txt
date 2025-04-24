@@ -1,0 +1,48 @@
+
+Course Project Rubric
+
+DUE DATE: April 27
+
+GENERAL INSTRUCTIONS:
+- Submit results as a PDF file.
+- 20% penalty per day for late submissions.
+- No grade if submitted more than 5 days late.
+- Final report must be submitted individually by each group member.
+
+FINAL REPORT FORMAT:
+- At least 3 pages (Word or LaTeX using ACM SIG template)
+- Must include these sections:
+  • Group Members and Individual Contributions
+  • Introduction and Problem Description
+  • Literature Review (at least 3 papers or studies)
+  • ML Models, Methods, or Algorithms
+  • Experiment Results (training loss, accuracy, etc.)
+  • Conclusion (key contributions)
+
+GRADING CRITERIA (Total: 100 points):
+
+1. INTEGRITY (20 pts)
+   • Include all required sections: 10 pts
+   • Meet 3-page minimum with correct template: 10 pts
+
+2. CLARITY (20 pts)
+   • Clear problem description in Introduction: 10 pts
+   • Clearly defined ML methods in methods section: 10 pts
+
+3. LITERATURE REVIEW (20 pts)
+   • Has literature review section: 10 pts
+   • Summarizes 3+ related papers/studies: 10 pts
+
+4. RESULTS (30 pts)
+   • Clearly present results via tables/figures: 10 pts
+   • +5 pts for each of the following bonus contributions (up to 30 max):
+     (1) Implement an advanced model (DNN, CNN, RNN, Transformer, LLM, etc.)
+     (2) Plot training loss over iterations
+     (3) Discuss overfitting/underfitting and mitigation
+     (4) Ablation studies (hyperparameters, architecture depth, etc.)
+     (5) Computational complexity analysis (FLOPs, memory, runtime)
+     (6) Compare multiple methods with justification
+
+5. INDIVIDUAL CONTRIBUTION (10 pts)
+   • Major contributor: 10 pts (50%+ code/report)
+   • Assistance contributor: 5 pts
