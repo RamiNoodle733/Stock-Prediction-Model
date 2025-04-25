@@ -5,19 +5,17 @@ import seaborn as sns
 from sklearn.model_selection import ParameterGrid
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, r2_score
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from sklearn.ensemble import GradientBoostingRegressor
 import time
 import yfinance as yf
 import os
 
 # Import our modules
-from models import evaluate_model
+from models_sklearn import evaluate_model
 
 def preprocess_data(data, lookback=60, test_size=0.2):
     """
-    Preprocess stock data for LSTM model
+    Preprocess stock data for machine learning models
     
     Args:
         data: DataFrame with stock prices
@@ -49,47 +47,9 @@ def preprocess_data(data, lookback=60, test_size=0.2):
     
     return X_train, X_test, y_train, y_test, scaler
 
-def build_model(input_shape, lstm_units=50, lstm_layers=2, dropout_rate=0.2):
-    """
-    Build an LSTM model with configurable hyperparameters
-    
-    Args:
-        input_shape: Shape of input data (lookback, features)
-        lstm_units: Number of LSTM units per layer
-        lstm_layers: Number of LSTM layers
-        dropout_rate: Dropout rate for regularization
-        
-    Returns:
-        Compiled LSTM model
-    """
-    model = Sequential()
-    
-    # First LSTM layer
-    if lstm_layers > 1:
-        model.add(LSTM(units=lstm_units, return_sequences=True, input_shape=input_shape))
-    else:
-        model.add(LSTM(units=lstm_units, return_sequences=False, input_shape=input_shape))
-    model.add(Dropout(dropout_rate))
-    
-    # Additional LSTM layers
-    for i in range(1, lstm_layers):
-        if i < lstm_layers - 1:
-            model.add(LSTM(units=lstm_units, return_sequences=True))
-        else:
-            model.add(LSTM(units=lstm_units, return_sequences=False))
-        model.add(Dropout(dropout_rate))
-    
-    # Output layer
-    model.add(Dense(units=1))
-    
-    # Compile the model
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    
-    return model
-
 def hyperparameter_tuning(start_date='2018-01-01', end_date='2023-01-01'):
     """
-    Perform hyperparameter tuning for the LSTM model on Apple stock
+    Perform hyperparameter tuning for Gradient Boosting on Apple stock
     
     Args:
         start_date: Start date for stock data
@@ -109,17 +69,12 @@ def hyperparameter_tuning(start_date='2018-01-01', end_date='2023-01-01'):
     print("Preprocessing data...")
     X_train, X_test, y_train, y_test, scaler = preprocess_data(data)
     
-    # Reshape input to be 3D [samples, time steps, features]
-    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
-    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-    
     # Define hyperparameter grid
     param_grid = {
-        'lstm_units': [50, 100],
-        'lstm_layers': [1, 2],
-        'dropout_rate': [0.2, 0.3],
-        'batch_size': [16, 32],
-        'epochs': [50, 100]
+        'n_estimators': [50, 100, 200],
+        'max_depth': [3, 5, 7],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'subsample': [0.8, 1.0]
     }
     
     # Generate all combinations of hyperparameters
@@ -127,7 +82,7 @@ def hyperparameter_tuning(start_date='2018-01-01', end_date='2023-01-01'):
     print(f"Testing {len(grid)} hyperparameter combinations...")
     
     # Create a directory for results if it doesn't exist
-    results_dir = 'tuning_results'
+    results_dir = 'tuning_results_sklearn'
     os.makedirs(results_dir, exist_ok=True)
     
     # Store results
@@ -137,22 +92,17 @@ def hyperparameter_tuning(start_date='2018-01-01', end_date='2023-01-01'):
         print(f"\nTraining model {i+1}/{len(grid)} with parameters: {params}")
         
         # Build model with current hyperparameters
-        model = build_model(
-            input_shape=(X_train.shape[1], 1),
-            lstm_units=params['lstm_units'],
-            lstm_layers=params['lstm_layers'],
-            dropout_rate=params['dropout_rate']
+        model = GradientBoostingRegressor(
+            n_estimators=params['n_estimators'],
+            max_depth=params['max_depth'],
+            learning_rate=params['learning_rate'],
+            subsample=params['subsample'],
+            random_state=42
         )
         
         # Train model
         start_time = time.time()
-        history = model.fit(
-            X_train, y_train,
-            epochs=params['epochs'],
-            batch_size=params['batch_size'],
-            validation_data=(X_test, y_test),
-            verbose=0
-        )
+        model.fit(X_train, y_train)
         training_time = time.time() - start_time
         
         # Make predictions
@@ -172,27 +122,29 @@ def hyperparameter_tuning(start_date='2018-01-01', end_date='2023-01-01'):
         }
         results.append(result)
         
-        # Create loss plot
-        plt.figure(figsize=(10, 6))
-        plt.plot(history.history['loss'], label='Training Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
-        plt.title(f'Model {i+1} Loss - LSTM Units: {params["lstm_units"]}, Layers: {params["lstm_layers"]}')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.savefig(f'{results_dir}/model_{i+1}_loss.png')
-        plt.close()
-        
         # Create predictions plot
         plt.figure(figsize=(12, 6))
         plt.plot(y_test, label='Actual')
         plt.plot(predictions, label='Predicted')
-        plt.title(f'Model {i+1} Predictions - LSTM Units: {params["lstm_units"]}, Layers: {params["lstm_layers"]}')
+        plt.title(f'Model {i+1} - n_est: {params["n_estimators"]}, max_depth: {params["max_depth"]}, lr: {params["learning_rate"]}')
         plt.xlabel('Time')
         plt.ylabel('Stock Price (Normalized)')
         plt.legend()
         plt.savefig(f'{results_dir}/model_{i+1}_predictions.png')
         plt.close()
+        
+        # Create feature importance plot
+        if i < 5:  # Only plot for the first few models to save time
+            importances = model.feature_importances_
+            indices = np.argsort(importances)[-20:]  # Top 20 features
+            
+            plt.figure(figsize=(10, 8))
+            plt.title(f'Feature Importances for Model {i+1}')
+            plt.barh(range(len(indices)), importances[indices], align='center')
+            plt.xlabel('Relative Importance')
+            plt.ylabel('Feature Index (Time Lag)')
+            plt.savefig(f'{results_dir}/model_{i+1}_importances.png')
+            plt.close()
     
     # Convert results to DataFrame and save
     results_df = pd.DataFrame(results)
@@ -208,7 +160,6 @@ def hyperparameter_tuning(start_date='2018-01-01', end_date='2023-01-01'):
 if __name__ == "__main__":
     # Set random seed for reproducibility
     np.random.seed(42)
-    tf.random.set_seed(42)
     
     # Run hyperparameter tuning for Apple
     results = hyperparameter_tuning('2018-01-01', '2023-01-01')
@@ -220,16 +171,25 @@ if __name__ == "__main__":
     plt.xlabel('Training Time (seconds)')
     plt.ylabel('Mean Squared Error')
     plt.grid(True)
-    plt.savefig('tuning_results/training_time_vs_mse.png')
+    plt.savefig('tuning_results_sklearn/training_time_vs_mse.png')
     plt.close()
     
-    # Plot number of layers vs MSE
+    # Plot number of estimators vs MSE
     plt.figure(figsize=(10, 6))
-    sns.boxplot(x='lstm_layers', y='mse', data=results)
-    plt.title('Number of LSTM Layers vs MSE')
-    plt.xlabel('Number of LSTM Layers')
+    sns.boxplot(x='n_estimators', y='mse', data=results)
+    plt.title('Number of Estimators vs MSE')
+    plt.xlabel('Number of Estimators')
     plt.ylabel('Mean Squared Error')
-    plt.savefig('tuning_results/layers_vs_mse.png')
+    plt.savefig('tuning_results_sklearn/estimators_vs_mse.png')
     plt.close()
     
-    print("Hyperparameter tuning completed. Results saved to 'tuning_results' directory.")
+    # Plot max depth vs MSE
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='max_depth', y='mse', data=results)
+    plt.title('Max Depth vs MSE')
+    plt.xlabel('Max Depth')
+    plt.ylabel('Mean Squared Error')
+    plt.savefig('tuning_results_sklearn/depth_vs_mse.png')
+    plt.close()
+    
+    print("Hyperparameter tuning completed. Results saved to 'tuning_results_sklearn' directory.")

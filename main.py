@@ -25,132 +25,122 @@ def fetch_stock_data(ticker, start_date, end_date):
     print(f"Data shape: {data.shape}")
     return data
 
-def analyze_multiple_stocks(tickers, start_date, end_date):
+def analyze_apple_stock(start_date, end_date):
     """
-    Analyze multiple stocks with Linear Regression and LSTM models
+    Analyze Apple stock with Linear Regression and LSTM models
     """
-    results = []
+    ticker = 'AAPL'
+    print(f"\n{'='*50}")
+    print(f"Analyzing {ticker}")
+    print(f"{'='*50}")
     
-    for ticker in tickers:
-        print(f"\n{'='*50}")
-        print(f"Analyzing {ticker}")
-        print(f"{'='*50}")
-        
-        # Fetch data
-        data = fetch_stock_data(ticker, start_date, end_date)
-        
-        # Preprocess data
-        X_train, X_test, y_train, y_test, scaler = preprocess_data(data)
-        
-        # ---- LINEAR REGRESSION MODEL ----
-        print("\nTraining Linear Regression model...")
-        lr_start_time = time.time()
-        lr_model = LinearRegression()
-        lr_model.fit(X_train, y_train)
-        lr_training_time = time.time() - lr_start_time
-        
-        # Make predictions
-        lr_predictions = lr_model.predict(X_test)
-        
-        # Evaluate model
-        lr_metrics = evaluate_model(y_test, lr_predictions)
-        print(f"Linear Regression - MSE: {lr_metrics['MSE']:.6f}, RMSE: {lr_metrics['RMSE']:.6f}, R²: {lr_metrics['R2']:.6f}")
-        print(f"Training time: {lr_training_time:.2f} seconds")
-        
-        # ---- LSTM MODEL ----
-        print("\nTraining LSTM model...")
-        # Reshape input for LSTM [samples, time steps, features]
-        X_train_lstm = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
-        X_test_lstm = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-        
-        # Train LSTM model
-        lstm_model, lstm_history, lstm_predictions, lstm_training_time = train_lstm_model(
-            X_train_lstm, y_train, X_test_lstm, y_test, epochs=50, batch_size=32
-        )
-        
-        # Evaluate model
-        lstm_metrics = evaluate_model(y_test, lstm_predictions)
-        print(f"LSTM - MSE: {lstm_metrics['MSE']:.6f}, RMSE: {lstm_metrics['RMSE']:.6f}, R²: {lstm_metrics['R2']:.6f}")
-        print(f"Training time: {lstm_training_time:.2f} seconds")
-        
-        # Create results directory for this ticker
-        results_dir = f'results/{ticker}'
-        os.makedirs(results_dir, exist_ok=True)
-        
-        # Plot training loss
-        plt.figure(figsize=(10, 6))
-        plt.plot(lstm_history.history['loss'], label='Training Loss')
-        plt.plot(lstm_history.history['val_loss'], label='Validation Loss')
-        plt.title(f'{ticker} - LSTM Model Loss Over Epochs')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f'{results_dir}/lstm_loss.png')
-        plt.close()
-        
-        # Plot predictions
-        plt.figure(figsize=(12, 6))
-        plt.plot(y_test, label='Actual')
-        plt.plot(lr_predictions, label='Linear Regression')
-        plt.plot(lstm_predictions, label='LSTM')
-        plt.title(f'{ticker} - Stock Price Predictions')
-        plt.xlabel('Time')
-        plt.ylabel('Stock Price (Normalized)')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f'{results_dir}/predictions_comparison.png')
-        plt.close()
-        
-        # Store results
-        results.append({
-            'ticker': ticker,
-            'lr_mse': lr_metrics['MSE'],
-            'lr_rmse': lr_metrics['RMSE'],
-            'lr_r2': lr_metrics['R2'],
-            'lr_training_time': lr_training_time,
-            'lstm_mse': lstm_metrics['MSE'],
-            'lstm_rmse': lstm_metrics['RMSE'],
-            'lstm_r2': lstm_metrics['R2'],
-            'lstm_training_time': lstm_training_time
-        })
+    # Fetch data
+    data = fetch_stock_data(ticker, start_date, end_date)
     
-    # Convert results to DataFrame and save
-    results_df = pd.DataFrame(results)
-    os.makedirs('results', exist_ok=True)
-    results_df.to_csv('results/model_comparison.csv', index=False)
+    # Preprocess data
+    X_train, X_test, y_train, y_test, scaler = preprocess_data(data)
     
-    # Create comparison plot
-    plt.figure(figsize=(12, 6))
+    # ---- LINEAR REGRESSION MODEL ----
+    print("\nTraining Linear Regression model...")
+    lr_start_time = time.time()
+    lr_model = LinearRegression()
+    lr_model.fit(X_train, y_train)
+    lr_training_time = time.time() - lr_start_time
     
-    x = np.arange(len(tickers))
-    width = 0.35
+    # Make predictions
+    lr_predictions = lr_model.predict(X_test)
     
-    plt.bar(x - width/2, results_df['lr_rmse'], width, label='Linear Regression')
-    plt.bar(x + width/2, results_df['lstm_rmse'], width, label='LSTM')
+    # Evaluate model
+    lr_metrics = evaluate_model(y_test, lr_predictions)
+    print(f"Linear Regression - MSE: {lr_metrics['MSE']:.6f}, RMSE: {lr_metrics['RMSE']:.6f}, R²: {lr_metrics['R2']:.6f}")
+    print(f"Training time: {lr_training_time:.2f} seconds")
     
-    plt.xlabel('Stock')
-    plt.ylabel('RMSE')
-    plt.title('Model Performance Comparison (RMSE)')
-    plt.xticks(x, tickers)
+    # ---- LSTM MODEL ----
+    print("\nTraining LSTM model...")
+    # Reshape input for LSTM [samples, time steps, features]
+    X_train_lstm = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+    X_test_lstm = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+    
+    # Train LSTM model
+    lstm_model, lstm_history, lstm_predictions, lstm_training_time = train_lstm_model(
+        X_train_lstm, y_train, X_test_lstm, y_test, epochs=50, batch_size=32
+    )
+    
+    # Evaluate model
+    lstm_metrics = evaluate_model(y_test, lstm_predictions)
+    print(f"LSTM - MSE: {lstm_metrics['MSE']:.6f}, RMSE: {lstm_metrics['RMSE']:.6f}, R²: {lstm_metrics['R2']:.6f}")
+    print(f"Training time: {lstm_training_time:.2f} seconds")
+    
+    # Create results directory for this ticker
+    results_dir = f'results/{ticker}'
+    os.makedirs(results_dir, exist_ok=True)
+    
+    # Plot training loss
+    plt.figure(figsize=(10, 6))
+    plt.plot(lstm_history.history['loss'], label='Training Loss')
+    plt.plot(lstm_history.history['val_loss'], label='Validation Loss')
+    plt.title(f'{ticker} - LSTM Model Loss Over Epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
     plt.legend()
-    plt.grid(True, axis='y')
-    plt.savefig('results/rmse_comparison.png')
+    plt.grid(True)
+    plt.savefig(f'{results_dir}/lstm_loss.png')
     plt.close()
     
-    # Create training time comparison
+    # Plot predictions
     plt.figure(figsize=(12, 6))
-    
-    plt.bar(x - width/2, results_df['lr_training_time'], width, label='Linear Regression')
-    plt.bar(x + width/2, results_df['lstm_training_time'], width, label='LSTM')
-    
-    plt.xlabel('Stock')
-    plt.ylabel('Training Time (seconds)')
-    plt.title('Model Training Time Comparison')
-    plt.xticks(x, tickers)
+    plt.plot(y_test, label='Actual')
+    plt.plot(lr_predictions, label='Linear Regression')
+    plt.plot(lstm_predictions, label='LSTM')
+    plt.title(f'{ticker} - Stock Price Predictions')
+    plt.xlabel('Time')
+    plt.ylabel('Stock Price (Normalized)')
     plt.legend()
+    plt.grid(True)
+    plt.savefig(f'{results_dir}/predictions_comparison.png')
+    plt.close()
+    
+    # Store results in dictionary
+    results = {
+        'ticker': ticker,
+        'lr_mse': lr_metrics['MSE'],
+        'lr_rmse': lr_metrics['RMSE'],
+        'lr_r2': lr_metrics['R2'],
+        'lr_training_time': lr_training_time,
+        'lstm_mse': lstm_metrics['MSE'],
+        'lstm_rmse': lstm_metrics['RMSE'],
+        'lstm_r2': lstm_metrics['R2'],
+        'lstm_training_time': lstm_training_time
+    }
+    
+    # Convert results to DataFrame and save
+    results_df = pd.DataFrame([results])
+    os.makedirs('results', exist_ok=True)
+    results_df.to_csv('results/apple_model_comparison.csv', index=False)
+    
+    # Create model comparison plots
+    
+    # RMSE comparison
+    plt.figure(figsize=(8, 6))
+    models = ['Linear Regression', 'LSTM']
+    rmse_values = [lr_metrics['RMSE'], lstm_metrics['RMSE']]
+    
+    plt.bar(models, rmse_values)
+    plt.title('Model Performance Comparison (RMSE)')
+    plt.ylabel('RMSE (lower is better)')
     plt.grid(True, axis='y')
-    plt.savefig('results/training_time_comparison.png')
+    plt.savefig('results/apple_rmse_comparison.png')
+    plt.close()
+    
+    # Training time comparison
+    plt.figure(figsize=(8, 6))
+    time_values = [lr_training_time, lstm_training_time]
+    
+    plt.bar(models, time_values)
+    plt.title('Model Training Time Comparison')
+    plt.ylabel('Training Time (seconds)')
+    plt.grid(True, axis='y')
+    plt.savefig('results/apple_training_time_comparison.png')
     plt.close()
     
     return results_df
@@ -267,16 +257,13 @@ if __name__ == "__main__":
     # Create main results directory
     os.makedirs('results', exist_ok=True)
     
-    # Define stocks to analyze
-    tickers = ['AAPL', 'MSFT', 'GOOG', 'AMZN']
-    
     # Define date range
     start_date = '2018-01-01'
     end_date = '2023-01-01'
     
-    # Run multi-stock analysis
-    print("\nRunning multi-stock analysis...")
-    model_comparison = analyze_multiple_stocks(tickers, start_date, end_date)
+    # Run Apple stock analysis
+    print("\nRunning Apple stock analysis...")
+    apple_results = analyze_apple_stock(start_date, end_date)
     
     # Run overfitting analysis
     print("\nRunning overfitting analysis...")

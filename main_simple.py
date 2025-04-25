@@ -37,18 +37,20 @@ def fetch_stock_data(ticker, start_date, end_date):
     print(f"Data shape: {data.shape}")
     return data
 
-def analyze_stock(ticker, start_date, end_date):
+def analyze_apple_stock(start_date, end_date):
     """
-    Analyze a stock using multiple models
+    Analyze Apple stock using multiple models
     
     Args:
-        ticker: Stock ticker symbol
         start_date: Start date for data
         end_date: End date for data
         
     Returns:
         Dictionary with model results
     """
+    # Define ticker
+    ticker = "AAPL"  # Apple stock
+    
     # Fetch data
     data = fetch_stock_data(ticker, start_date, end_date)
     
@@ -172,15 +174,14 @@ def analyze_stock(ticker, start_date, end_date):
 
 def main():
     # Define parameters
-    ticker = "AAPL"  # Apple stock
     start_date = "2020-01-01"
     end_date = "2023-01-01"
     
-    # Analyze the stock
-    print(f"Analyzing {ticker} stock...")
-    results, metrics_df = analyze_stock(ticker, start_date, end_date)
+    # Analyze Apple stock
+    print(f"Analyzing Apple (AAPL) stock...")
+    results, metrics_df = analyze_apple_stock(start_date, end_date)
     
-    print(f"Analysis for {ticker} complete. Results saved to the 'results' directory.")
+    print(f"Analysis for Apple (AAPL) complete. Results saved to the 'results' directory.")
 
 if __name__ == "__main__":
     main()

@@ -1,177 +1,179 @@
-import yfinance as yf
 import pandas as pd
-import numpy as np
+import yfinance as yf
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
-import argparse
+import os
 
-def fetch_stock_data(ticker, start_date, end_date=None, interval='1d'):
+def fetch_apple_stock_data(start_date='2018-01-01', end_date='2023-01-01'):
     """
-    Fetch stock data from Yahoo Finance
+    Fetch Apple stock data from Yahoo Finance
     
     Args:
-        ticker: Stock ticker symbol
-        start_date: Start date in YYYY-MM-DD format
-        end_date: End date in YYYY-MM-DD format (defaults to today)
-        interval: Data interval ('1d', '1wk', '1mo')
-    
+        start_date: Start date for data retrieval (string in 'YYYY-MM-DD' format)
+        end_date: End date for data retrieval (string in 'YYYY-MM-DD' format)
+        
     Returns:
         DataFrame with stock data
     """
-    # If no end date is provided, use today
-    if end_date is None:
-        end_date = datetime.now().strftime('%Y-%m-%d')
+    ticker = 'AAPL'
+    print(f"Fetching stock data for {ticker} from {start_date} to {end_date}...")
     
     # Download data
-    print(f"Fetching data for {ticker} from {start_date} to {end_date}")
-    data = yf.download(ticker, start=start_date, end=end_date, interval=interval)
+    df = yf.download(ticker, start=start_date, end=end_date)
     
-    # Check if data was successfully downloaded
-    if data.empty:
-        raise ValueError(f"No data found for ticker {ticker} in the specified date range")
+    print(f"Downloaded {len(df)} rows of data")
     
-    # Reset index to make Date a column
-    data.reset_index(inplace=True)
-    
-    return data
+    # Check for missing values
+    missing_values = df.isnull().sum().sum()
+    if missing_values > 0:
+        print(f"Warning: Found {missing_values} missing values. Filling with forward fill method.")
+        df.fillna(method='ffill', inplace=True)
+        
+    return df
 
-def plot_stock_data(data, ticker, save_path=None):
+def plot_apple_stock_data(data, save_path=None):
     """
-    Plot stock price and volume
+    Plot stock data
     
     Args:
         data: DataFrame with stock data
-        ticker: Stock ticker symbol
-        save_path: Path to save the figure
+        save_path: Path to save the plot (if None, plot is displayed)
     """
-    # Create figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [3, 1]})
+    ticker = 'AAPL'
+    # Create a figure with subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), gridspec_kw={'height_ratios': [3, 1]})
     
     # Plot closing price
-    ax1.plot(data['Date'], data['Close'], label='Close Price', color='blue')
+    ax1.plot(data.index, data['Close'], label='Close Price')
     ax1.set_title(f'{ticker} Stock Price')
     ax1.set_ylabel('Price (USD)')
     ax1.grid(True)
     ax1.legend()
     
-    # Plot trading volume
-    ax2.bar(data['Date'], data['Volume'], color='gray', alpha=0.7)
+    # Plot volume
+    ax2.bar(data.index, data['Volume'] / 1000000)
     ax2.set_title(f'{ticker} Trading Volume')
-    ax2.set_xlabel('Date')
-    ax2.set_ylabel('Volume')
+    ax2.set_ylabel('Volume (millions)')
     ax2.grid(True)
     
-    # Adjust layout and date formatting
-    fig.autofmt_xdate()
     plt.tight_layout()
     
-    # Save or show
+    # Save or display the plot
     if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path)
         plt.close()
+        print(f"Plot saved to {save_path}")
     else:
         plt.show()
 
-def calculate_technical_indicators(data):
+def calculate_returns(data):
     """
-    Calculate technical indicators for stock data
+    Calculate daily and cumulative returns
     
     Args:
         data: DataFrame with stock data
-    
+        
     Returns:
-        DataFrame with added technical indicators
+        DataFrame with original data and return columns added
     """
+    # Make a copy to avoid modifying the original
     df = data.copy()
     
-    # Moving Averages
-    df['MA_5'] = df['Close'].rolling(window=5).mean()
-    df['MA_20'] = df['Close'].rolling(window=20).mean()
-    df['MA_50'] = df['Close'].rolling(window=50).mean()
+    # Calculate daily returns
+    df['Daily_Return'] = df['Close'].pct_change() * 100
     
-    # Relative Strength Index (RSI)
-    # Calculate price changes
-    delta = df['Close'].diff()
-    
-    # Separate gains and losses
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
-    
-    # Calculate average gain and loss over 14 periods
-    avg_gain = gain.rolling(window=14).mean()
-    avg_loss = loss.rolling(window=14).mean()
-    
-    # Calculate RS and RSI
-    rs = avg_gain / avg_loss
-    df['RSI'] = 100 - (100 / (1 + rs))
-    
-    # Moving Average Convergence Divergence (MACD)
-    df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
-    df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
-    df['MACD'] = df['EMA_12'] - df['EMA_26']
-    df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
-    
-    # Bollinger Bands
-    df['MA_20'] = df['Close'].rolling(window=20).mean()
-    df['Upper_Band'] = df['MA_20'] + 2 * df['Close'].rolling(window=20).std()
-    df['Lower_Band'] = df['MA_20'] - 2 * df['Close'].rolling(window=20).std()
-    
-    # Drop NaN values
-    df = df.dropna()
+    # Calculate cumulative returns
+    df['Cum_Return'] = (1 + df['Daily_Return']/100).cumprod() - 1
+    df['Cum_Return'] = df['Cum_Return'] * 100  # Convert to percentage
     
     return df
 
-def prepare_for_ml(data, feature_columns=None, target_column='Close'):
+def analyze_apple_stock_statistics(data, save_dir=None):
     """
-    Prepare data for machine learning
+    Analyze stock statistics and create plots
     
     Args:
         data: DataFrame with stock data
-        feature_columns: List of feature columns to use (None uses all available)
-        target_column: Target column to predict
+        save_dir: Directory to save plots (if None, plots are displayed)
         
     Returns:
-        X, y, feature_names
+        DataFrame with statistical analysis
     """
-    if feature_columns is None:
-        # Use all columns except Date and target column
-        feature_columns = [col for col in data.columns if col not in ['Date', target_column]]
+    ticker = 'AAPL'
+    # Calculate returns
+    df = calculate_returns(data)
     
-    # Select features and target
-    X = data[feature_columns].values
-    y = data[target_column].values
+    # Calculate statistics
+    stats = {
+        'Ticker': ticker,
+        'Start_Date': df.index[0].strftime('%Y-%m-%d'),
+        'End_Date': df.index[-1].strftime('%Y-%m-%d'),
+        'Trading_Days': len(df),
+        'Start_Price': df['Close'].iloc[0],
+        'End_Price': df['Close'].iloc[-1],
+        'Min_Price': df['Close'].min(),
+        'Max_Price': df['Close'].max(),
+        'Avg_Price': df['Close'].mean(),
+        'Total_Return_Pct': df['Cum_Return'].iloc[-1],
+        'Avg_Daily_Return_Pct': df['Daily_Return'].mean(),
+        'StdDev_Daily_Return_Pct': df['Daily_Return'].std(),
+        'Positive_Days_Pct': (df['Daily_Return'] > 0).mean() * 100
+    }
     
-    return X, y, feature_columns
+    stats_df = pd.DataFrame([stats])
+    
+    # Create plots if save_dir is specified
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Plot 1: Closing Price and Volume
+        plot_apple_stock_data(df, save_path=f"{save_dir}/{ticker}_price_volume.png")
+        
+        # Plot 2: Daily Returns
+        plt.figure(figsize=(14, 7))
+        plt.plot(df.index, df['Daily_Return'])
+        plt.title(f'{ticker} Daily Returns')
+        plt.ylabel('Daily Return (%)')
+        plt.grid(True)
+        plt.savefig(f"{save_dir}/{ticker}_daily_returns.png")
+        plt.close()
+        
+        # Plot 3: Cumulative Returns
+        plt.figure(figsize=(14, 7))
+        plt.plot(df.index, df['Cum_Return'])
+        plt.title(f'{ticker} Cumulative Returns')
+        plt.ylabel('Cumulative Return (%)')
+        plt.grid(True)
+        plt.savefig(f"{save_dir}/{ticker}_cumulative_returns.png")
+        plt.close()
+        
+        # Plot 4: Return Distribution
+        plt.figure(figsize=(14, 7))
+        plt.hist(df['Daily_Return'].dropna(), bins=50, alpha=0.75)
+        plt.title(f'{ticker} Daily Returns Distribution')
+        plt.xlabel('Daily Return (%)')
+        plt.ylabel('Frequency')
+        plt.grid(True)
+        plt.savefig(f"{save_dir}/{ticker}_return_distribution.png")
+        plt.close()
+        
+        # Save statistics to CSV
+        stats_df.to_csv(f"{save_dir}/{ticker}_statistics.csv", index=False)
+        print(f"Analysis saved to {save_dir} directory")
+    
+    return stats_df
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Fetch and process stock data')
-    parser.add_argument('--ticker', type=str, default='AAPL', help='Stock ticker symbol')
-    parser.add_argument('--start_date', type=str, default='2020-01-01', help='Start date (YYYY-MM-DD)')
-    parser.add_argument('--end_date', type=str, default=None, help='End date (YYYY-MM-DD)')
-    parser.add_argument('--interval', type=str, default='1d', help='Data interval (1d, 1wk, 1mo)')
-    parser.add_argument('--output', type=str, default=None, help='Output CSV file path')
-    parser.add_argument('--plot', action='store_true', help='Plot the stock data')
+    # Create a directory for raw data analysis
+    analysis_dir = "raw_data_analysis"
+    os.makedirs(analysis_dir, exist_ok=True)
     
-    args = parser.parse_args()
+    # Fetch Apple stock data for the past 5 years
+    apple_data = fetch_apple_stock_data('2018-01-01', '2023-01-01')
     
-    # Fetch data
-    data = fetch_stock_data(args.ticker, args.start_date, args.end_date, args.interval)
+    # Perform statistical analysis and create plots
+    stats = analyze_apple_stock_statistics(apple_data, save_dir=analysis_dir)
     
-    # Add technical indicators
-    data_with_indicators = calculate_technical_indicators(data)
-    
-    # Save to CSV if output path is provided
-    if args.output:
-        data_with_indicators.to_csv(args.output, index=False)
-        print(f"Data saved to {args.output}")
-    
-    # Plot if requested
-    if args.plot:
-        plot_stock_data(data, args.ticker)
-    
-    # Display summary
-    print(f"\nData Summary for {args.ticker}:")
-    print(f"Date Range: {data['Date'].min()} to {data['Date'].max()}")
-    print(f"Total Records: {len(data)}")
-    print("\nSample Data:")
-    print(data.head())
+    # Print summary statistics
+    print("\nApple Stock Summary Statistics:")
+    print(stats)

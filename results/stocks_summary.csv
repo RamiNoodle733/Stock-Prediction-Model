@@ -1,0 +1,5 @@
+,Best Model,RMSE,R²
+AAPL,Linear Regression,1.3500278420027115e-15,1.0
+MSFT,Linear Regression,7.883016648547511e-16,1.0
+GOOG,Linear Regression,9.369361125945749e-16,1.0
+AMZN,Linear Regression,1.6829350251669967e-15,1.0

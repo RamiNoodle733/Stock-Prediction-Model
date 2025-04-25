@@ -305,57 +305,6 @@ def run_overfitting_analysis(ticker='AAPL', start_date='2018-01-01', end_date='2
     
     return results, metrics_df
 
-def analyze_multiple_stocks(tickers, start_date, end_date):
-    """
-    Analyze multiple stocks and compare them
-    """
-    all_results = {}
-    all_metrics = {}
-    
-    # Analyze each stock
-    for ticker in tickers:
-        results, metrics_df = analyze_stock(ticker, start_date, end_date)
-        all_results[ticker] = results
-        all_metrics[ticker] = metrics_df
-    
-    # Create a summary of the best model for each stock
-    summary = {}
-    
-    for ticker, metrics in all_metrics.items():
-        best_model = metrics['RMSE'].idxmin()  # Model with lowest RMSE
-        summary[ticker] = {
-            'Best Model': best_model,
-            'RMSE': metrics.loc[best_model, 'RMSE'],
-            'R²': metrics.loc[best_model, 'R²']
-        }
-    
-    # Create a summary DataFrame
-    summary_df = pd.DataFrame(summary).T
-    
-    # Save to CSV
-    os.makedirs('results', exist_ok=True)
-    summary_df.to_csv('results/stocks_summary.csv')
-    
-    # Plot best RMSE by stock
-    plt.figure(figsize=(12, 6))
-    plt.bar(summary_df.index, summary_df['RMSE'])
-    plt.title('Best Model RMSE by Stock')
-    plt.ylabel('RMSE (lower is better)')
-    plt.grid(True, axis='y')
-    plt.savefig('results/best_rmse_by_stock.png')
-    plt.close()
-    
-    # Plot best R² by stock
-    plt.figure(figsize=(12, 6))
-    plt.bar(summary_df.index, summary_df['R²'])
-    plt.title('Best Model R² by Stock')
-    plt.ylabel('R² (higher is better)')
-    plt.grid(True, axis='y')
-    plt.savefig('results/best_r2_by_stock.png')
-    plt.close()
-    
-    return summary_df
-
 if __name__ == "__main__":
     # Set random seed for reproducibility
     np.random.seed(42)
@@ -363,21 +312,21 @@ if __name__ == "__main__":
     # Create main results directory
     os.makedirs('results', exist_ok=True)
     
-    # Define stocks to analyze
-    tickers = ['AAPL', 'MSFT', 'GOOG', 'AMZN']
+    # Define ticker and date range
+    ticker = 'AAPL'  # Only analyze Apple stock
     
     # Define date range (3 years)
     end_date = '2023-01-01'
     start_date = '2020-01-01'
     
-    # Run multi-stock analysis
-    print("\nRunning multi-stock analysis...")
-    stock_summary = analyze_multiple_stocks(tickers, start_date, end_date)
+    # Run Apple stock analysis
+    print("\nRunning Apple stock analysis...")
+    apple_results, apple_metrics = analyze_stock(ticker, start_date, end_date)
     
     # Run overfitting analysis on Apple stock
     print("\nRunning overfitting analysis...")
-    overfitting_results, overfitting_metrics = run_overfitting_analysis('AAPL', start_date, end_date)
+    overfitting_results, overfitting_metrics = run_overfitting_analysis(ticker, start_date, end_date)
     
     print("\nAll analyses complete. Results saved to 'results' directory.")
-    print("\nSummary of best models for each stock:")
-    print(stock_summary)
+    print("\nSummary of models for Apple stock:")
+    print(apple_metrics)

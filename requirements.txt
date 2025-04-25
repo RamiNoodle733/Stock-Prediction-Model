@@ -1,0 +1,8 @@
+numpy>=1.19.0
+pandas>=1.0.0
+matplotlib>=3.2.0
+seaborn>=0.11.0
+scikit-learn>=0.24.0
+yfinance>=0.1.63
+# Optional: uncomment if you want to use the LSTM models
+# tensorflow>=2.4.0
