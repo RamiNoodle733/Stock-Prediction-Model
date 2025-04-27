@@ -56,13 +56,50 @@ def load_stock_data(ticker, data_dir="data"):
         data_dir (str): Directory containing the data files
         
     Returns:
-        pd.DataFrame: Stock data
+        pd.DataFrame: Stock data with standard format
     """
     file_path = os.path.join(data_dir, f"{ticker}_data.csv")
     
     if os.path.exists(file_path):
         print(f"Loading {ticker} data from {file_path}")
-        return pd.read_csv(file_path, index_col=0, parse_dates=True)
+        
+        try:
+            # Check the structure of the CSV by reading the first few lines
+            with open(file_path, 'r') as f:
+                first_lines = [next(f).strip() for _ in range(5)]
+            
+            # Check if this is the custom format by looking for "Ticker" in second row
+            if any('Ticker' in line for line in first_lines[:2]):
+                print("Detected non-standard CSV format. Transforming data...")
+                # Skip the first three rows and read as transposed data
+                df = pd.read_csv(file_path, skiprows=3, header=None)
+                
+                # First column contains dates
+                dates = df.iloc[:, 0].values
+                
+                # Second column contains Close prices
+                close_prices = df.iloc[:, 1].values
+                
+                # Create a proper DataFrame with Date and Close columns
+                transformed_data = pd.DataFrame({
+                    'Date': pd.to_datetime(dates),
+                    'Close': close_prices,
+                })
+                
+                # Set Date as index
+                transformed_data.set_index('Date', inplace=True)
+                return transformed_data
+            else:
+                # Standard format
+                data = pd.read_csv(file_path, parse_dates=['Date'], index_col='Date')
+                return data
+                
+        except Exception as e:
+            print(f"Error reading CSV file: {str(e)}")
+            print("Attempting to download fresh data...")
+            data = download_stock_data(ticker)
+            save_stock_data(data, ticker, data_dir)
+            return data
     else:
         print(f"No local data found for {ticker}, downloading...")
         data = download_stock_data(ticker)
@@ -136,17 +173,24 @@ def visualize_stock_data(data, ticker, output_dir="data"):
         ticker (str): Stock ticker symbol
         output_dir (str): Directory to save visualization
     """
-    plt.figure(figsize=(12, 6))
-    plt.title(f"{ticker} Stock Price")
-    plt.plot(data['Close'])
-    plt.xlabel('Date')
-    plt.ylabel('Close Price (USD)')
-    plt.tight_layout()
-    
-    # Save the plot
-    os.makedirs(output_dir, exist_ok=True)
-    plt.savefig(os.path.join(output_dir, f"{ticker}_stock_price.png"))
-    plt.close()
+    try:
+        # Create the output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"{ticker}_stock_price.png")
+        
+        # Use the most basic plotting approach possible
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(data['Close'].values)
+        ax.set_title(f"{ticker} Stock Price")
+        ax.set_xlabel('Trading Days')
+        ax.set_ylabel('Close Price (USD)')
+        fig.tight_layout()
+        fig.savefig(output_path)
+        plt.close(fig)
+        print(f"Stock price visualization saved to {output_path}")
+    except Exception as e:
+        print(f"Warning: Could not visualize stock data: {str(e)}")
+        print("Continuing with model training without visualization...")
 
 def load_multiple_stocks(tickers, start_date=None, end_date=None, period="5y", data_dir="data"):
     """
@@ -169,7 +213,12 @@ def load_multiple_stocks(tickers, start_date=None, end_date=None, period="5y", d
             # Try to load from file first
             file_path = os.path.join(data_dir, f"{ticker}_data.csv")
             if os.path.exists(file_path):
-                stocks_data[ticker] = pd.read_csv(file_path, index_col=0, parse_dates=True)
+                # Use same improved date handling as in load_stock_data
+                data = pd.read_csv(file_path)
+                if 'Date' in data.columns:
+                    data['Date'] = pd.to_datetime(data['Date'])
+                    data.set_index('Date', inplace=True)
+                stocks_data[ticker] = data
             else:
                 # Download if not available
                 data = download_stock_data(ticker, start_date, end_date, period)

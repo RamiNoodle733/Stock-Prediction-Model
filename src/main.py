@@ -252,6 +252,122 @@ def run_multi_stock_analysis():
         output_dir = os.path.join('results', ticker)
         run_stock_prediction(ticker=ticker, output_dir=output_dir)
 
+def run_multiple_stock_prediction(tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'], 
+                           output_dir='results',
+                           sequence_length=60,
+                           test_size=0.2):
+    """
+    Run stock price prediction on multiple stocks and compare results.
+    
+    Args:
+        tickers (list): List of stock ticker symbols to analyze
+        output_dir (str): Directory to save results
+        sequence_length (int): Number of time steps for sequence input
+        test_size (float): Proportion of data to use for testing
+    """
+    print("=" * 70)
+    print(f"MULTIPLE STOCK PREDICTION COMPARISON")
+    print("=" * 70)
+    
+    # Create a dictionary to store results for each ticker
+    all_results = {}
+    
+    # Process each ticker
+    for ticker in tickers:
+        print(f"\nProcessing {ticker}...")
+        
+        # Create a specific output directory for this ticker
+        ticker_output_dir = os.path.join(output_dir, ticker)
+        os.makedirs(ticker_output_dir, exist_ok=True)
+        
+        try:
+            # Load data
+            data = load_stock_data(ticker)
+            
+            # Visualize data
+            try:
+                visualize_stock_data(data, ticker, ticker_output_dir)
+            except Exception as e:
+                print(f"Warning: Could not visualize {ticker} data: {str(e)}")
+            
+            # Prepare data
+            X_train, X_test, y_train, y_test, scaler = prepare_data(
+                data, sequence_length=sequence_length, test_size=test_size
+            )
+            
+            # Train Linear Regression model (fastest and most reliable)
+            print(f"Training Linear Regression model for {ticker}...")
+            lr_model = LinearRegressionModel()
+            lr_model.fit(X_train, y_train)
+            
+            # Evaluate model
+            metrics, y_pred = lr_model.evaluate(X_test, y_test)
+            
+            # Store results
+            all_results[ticker] = {
+                'MSE': metrics['MSE'],
+                'RMSE': metrics['RMSE'],
+                'R²': metrics['R²'],
+                'Training Time': metrics['Training Time']
+            }
+            
+            # Plot predictions
+            plot_predictions(
+                y_test, y_pred, 
+                title=f"{ticker} Stock Price Prediction (Linear Regression)",
+                save_path=os.path.join(ticker_output_dir, f"{ticker}_predictions.png")
+            )
+            
+        except Exception as e:
+            print(f"Error processing {ticker}: {str(e)}")
+    
+    # Create comparison table of results
+    results_df = pd.DataFrame.from_dict(all_results, orient='index')
+    print("\nComparison of model performance across stocks:")
+    print(results_df)
+    
+    # Save results to CSV
+    results_path = os.path.join(output_dir, "stock_comparison.csv")
+    results_df.to_csv(results_path)
+    print(f"Results saved to {results_path}")
+    
+    # Visualize comparison
+    plt.figure(figsize=(12, 8))
+    
+    # Plot RMSE comparison
+    plt.subplot(2, 1, 1)
+    results_df['RMSE'].plot(kind='bar')
+    plt.title('RMSE Comparison Across Stocks')
+    plt.ylabel('RMSE (lower is better)')
+    plt.tight_layout()
+    
+    # Plot R² comparison
+    plt.subplot(2, 1, 2)
+    results_df['R²'].plot(kind='bar')
+    plt.title('R² Comparison Across Stocks')
+    plt.ylabel('R² (higher is better)')
+    plt.tight_layout()
+    
+    # Save comparison plot
+    comparison_plot_path = os.path.join(output_dir, "stock_model_comparison.png")
+    plt.savefig(comparison_plot_path)
+    print(f"Comparison plot saved to {comparison_plot_path}")
+    plt.close()
+    
+    return all_results
+
 if __name__ == "__main__":
+    # Choose which analysis to run
+    run_single = True
+    run_multiple = True
+    
     # Run prediction on a single stock (Apple)
-    run_stock_prediction(ticker='AAPL', output_dir='results')
+    if run_single:
+        run_stock_prediction(ticker='AAPL', output_dir='results')
+    
+    # Run prediction on multiple stocks
+    if run_multiple:
+        run_multiple_stock_prediction(
+            tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'],
+            output_dir='results/multiple'
+        )
