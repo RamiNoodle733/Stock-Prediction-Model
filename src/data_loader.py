@@ -1,143 +1,188 @@
-import yfinance as yf
+"""
+Stock Market Prediction - Data Loader Module
+This module handles loading and preprocessing stock market data.
+"""
+
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
 import os
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+import yfinance as yf
 
-def download_stock_data(ticker='AAPL', start_date=None, end_date=None, period='5y'):
+def download_stock_data(ticker, start_date=None, end_date=None, period="5y"):
     """
-    Download historical stock data using yfinance
+    Downloads historical stock data using the yfinance library.
     
-    Parameters:
-    -----------
-    ticker : str
-        Stock ticker symbol (default: 'AAPL' for Apple)
-    start_date : str
-        Start date in 'YYYY-MM-DD' format (default: None)
-    end_date : str
-        End date in 'YYYY-MM-DD' format (default: None)
-    period : str
-        Period to download if start_date and end_date are not specified
-        (default: '5y' for 5 years)
-    
+    Args:
+        ticker (str): Stock ticker symbol (e.g., 'AAPL' for Apple)
+        start_date (str, optional): Start date in 'YYYY-MM-DD' format
+        end_date (str, optional): End date in 'YYYY-MM-DD' format
+        period (str, optional): Time period to download if start_date and end_date are not specified
+        
     Returns:
-    --------
-    DataFrame: Historical stock data
+        pd.DataFrame: Historical stock data
     """
     print(f"Downloading {ticker} stock data...")
     
-    # If dates are not specified, use period
-    if start_date is None or end_date is None:
-        data = yf.download(ticker, period=period)
-    else:
+    if start_date and end_date:
         data = yf.download(ticker, start=start_date, end=end_date)
+    else:
+        data = yf.download(ticker, period=period)
     
     print(f"Downloaded {len(data)} rows of data for {ticker}")
-    
-    # Save to CSV file
-    os.makedirs('../data', exist_ok=True)
-    csv_file = f"../data/{ticker}_stock_data.csv"
-    data.to_csv(csv_file)
-    print(f"Data saved to {csv_file}")
-    
     return data
 
-def load_stock_data(ticker='AAPL', force_download=False):
+def save_stock_data(data, ticker, output_dir="data"):
     """
-    Load stock data from CSV file or download if not available
+    Saves stock data to a CSV file.
     
-    Parameters:
-    -----------
-    ticker : str
-        Stock ticker symbol (default: 'AAPL' for Apple)
-    force_download : bool
-        If True, force download even if file exists
+    Args:
+        data (pd.DataFrame): Stock data
+        ticker (str): Stock ticker symbol
+        output_dir (str): Output directory path
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    file_path = os.path.join(output_dir, f"{ticker}_data.csv")
+    data.to_csv(file_path)
+    print(f"Data saved to {file_path}")
+
+def load_stock_data(ticker, data_dir="data"):
+    """
+    Loads stock data from a CSV file or downloads it if not available.
+    
+    Args:
+        ticker (str): Stock ticker symbol
+        data_dir (str): Directory containing the data files
         
     Returns:
-    --------
-    DataFrame: Historical stock data
+        pd.DataFrame: Stock data
     """
-    csv_file = f"../data/{ticker}_stock_data.csv"
+    file_path = os.path.join(data_dir, f"{ticker}_data.csv")
     
-    if os.path.exists(csv_file) and not force_download:
-        print(f"Loading {ticker} data from {csv_file}")
-        data = pd.read_csv(csv_file, index_col=0, parse_dates=True)
-        return data
+    if os.path.exists(file_path):
+        print(f"Loading {ticker} data from {file_path}")
+        return pd.read_csv(file_path, index_col=0, parse_dates=True)
     else:
-        return download_stock_data(ticker=ticker)
+        print(f"No local data found for {ticker}, downloading...")
+        data = download_stock_data(ticker)
+        save_stock_data(data, ticker, data_dir)
+        return data
 
-def prepare_data_for_training(data, target_column='Close', sequence_length=60, train_split=0.8):
+def create_sequences(data, sequence_length=60):
     """
-    Prepare data for training a machine learning model
+    Creates input sequences for time series prediction.
     
-    Parameters:
-    -----------
-    data : DataFrame
-        Historical stock data
-    target_column : str
-        Column to predict (default: 'Close' price)
-    sequence_length : int
-        Number of previous days to use for prediction (default: 60 days)
-    train_split : float
-        Percentage of data to use for training (default: 80%)
-    
+    Args:
+        data (np.ndarray): The preprocessed stock price data
+        sequence_length (int): Number of time steps to use for input sequence
+        
     Returns:
-    --------
-    tuple: (X_train, y_train, X_test, y_test, scaler)
+        tuple: (X, y) where X is input sequences and y is target values
     """
-    from sklearn.preprocessing import MinMaxScaler
+    X, y = [], []
+    for i in range(len(data) - sequence_length):
+        X.append(data[i:i + sequence_length])
+        y.append(data[i + sequence_length])
     
-    # Select the target column and convert to numpy array
-    dataset = data[target_column].values.reshape(-1, 1)
+    return np.array(X), np.array(y)
+
+def prepare_data(data, target_col='Close', sequence_length=60, test_size=0.2):
+    """
+    Prepares stock data for modeling by:
+    1. Selecting the target column
+    2. Scaling the data
+    3. Creating sequences
+    4. Splitting into train and test sets
+    
+    Args:
+        data (pd.DataFrame): Stock data
+        target_col (str): Target column to predict
+        sequence_length (int): Number of time steps to use for input sequence
+        test_size (float): Proportion of data to use for testing
+        
+    Returns:
+        tuple: (X_train, X_test, y_train, y_test, scaler)
+    """
+    # Select target column and convert to numpy array
+    target_data = data[target_col].values.reshape(-1, 1)
     
     # Scale the data
     scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(dataset)
+    scaled_data = scaler.fit_transform(target_data)
     
     # Create sequences
-    X = []
-    y = []
+    X, y = create_sequences(scaled_data, sequence_length)
     
-    for i in range(sequence_length, len(scaled_data)):
-        X.append(scaled_data[i-sequence_length:i, 0])
-        y.append(scaled_data[i, 0])
-    
-    X, y = np.array(X), np.array(y)
-    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+    # Reshape for modeling (samples, time steps, features)
+    X = X.reshape(X.shape[0], X.shape[1], 1)
     
     # Split into train and test sets
-    train_size = int(len(X) * train_split)
-    X_train, X_test = X[:train_size], X[train_size:]
-    y_train, y_test = y[:train_size], y[train_size:]
+    split_idx = int(len(X) * (1 - test_size))
+    X_train, X_test = X[:split_idx], X[split_idx:]
+    y_train, y_test = y[:split_idx], y[split_idx:]
     
     print(f"Training data shape: {X_train.shape}")
     print(f"Testing data shape: {X_test.shape}")
     
-    return X_train, y_train, X_test, y_test, scaler
+    return X_train, X_test, y_train, y_test, scaler
 
-def plot_stock_data(data, title="Stock Price History"):
+def visualize_stock_data(data, ticker, output_dir="data"):
     """
-    Plot the stock price history
+    Creates visualization of stock data.
     
-    Parameters:
-    -----------
-    data : DataFrame
-        Historical stock data
-    title : str
-        Title for the plot
+    Args:
+        data (pd.DataFrame): Stock data
+        ticker (str): Stock ticker symbol
+        output_dir (str): Directory to save visualization
     """
-    plt.figure(figsize=(14, 7))
-    plt.plot(data['Close'], label='Close Price')
-    plt.title(title)
+    plt.figure(figsize=(12, 6))
+    plt.title(f"{ticker} Stock Price")
+    plt.plot(data['Close'])
     plt.xlabel('Date')
-    plt.ylabel('Price (USD)')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig('../data/stock_price_history.png')
-    plt.show()
+    plt.ylabel('Close Price (USD)')
+    plt.tight_layout()
+    
+    # Save the plot
+    os.makedirs(output_dir, exist_ok=True)
+    plt.savefig(os.path.join(output_dir, f"{ticker}_stock_price.png"))
+    plt.close()
+
+def load_multiple_stocks(tickers, start_date=None, end_date=None, period="5y", data_dir="data"):
+    """
+    Loads data for multiple stock tickers.
+    
+    Args:
+        tickers (list): List of stock ticker symbols
+        start_date (str, optional): Start date
+        end_date (str, optional): End date
+        period (str, optional): Time period
+        data_dir (str): Data directory
+        
+    Returns:
+        dict: Dictionary mapping ticker symbols to DataFrames
+    """
+    stocks_data = {}
+    
+    for ticker in tickers:
+        try:
+            # Try to load from file first
+            file_path = os.path.join(data_dir, f"{ticker}_data.csv")
+            if os.path.exists(file_path):
+                stocks_data[ticker] = pd.read_csv(file_path, index_col=0, parse_dates=True)
+            else:
+                # Download if not available
+                data = download_stock_data(ticker, start_date, end_date, period)
+                save_stock_data(data, ticker, data_dir)
+                stocks_data[ticker] = data
+        except Exception as e:
+            print(f"Error loading {ticker}: {e}")
+    
+    return stocks_data
 
 if __name__ == "__main__":
     # Example usage
-    data = load_stock_data(ticker='AAPL', force_download=True)
-    plot_stock_data(data, title="Apple Stock Price History")
+    ticker = "AAPL"
+    data = load_stock_data(ticker)
+    print(data.head())
+    visualize_stock_data(data, ticker)
