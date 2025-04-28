@@ -1,94 +1,110 @@
-# Stock Market Prediction
+# Stock Market Prediction Project
 
-This project implements machine learning models to predict stock prices based on historical data, specifically focusing on Apple (AAPL) stock.
+This repository implements a full end-to-end workflow for predicting future stock prices using historical NASDAQ data and machine learning models (Linear Regression, Random Forest, LSTM). The pipeline covers data download, preprocessing, model training, evaluation, comparison, ablation study, feature importance, and future forecasting.
 
-## Project Overview
-
-This project uses historical stock price data to train and evaluate several machine learning models for predicting future stock prices. The goal is to compare different approaches and understand their strengths and limitations in the context of financial time series forecasting.
+## Table of Contents
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Outputs](#outputs)
+- [Results Interpretation](#results-interpretation)
+- [Customization](#customization)
+- [Report](#report)
+- [Authors](#authors)
+- [License](#license)
 
 ## Features
+- Download and cache NASDAQ stock data via `yfinance`
+- Data preparation: scaling and sequence generation
+- Three model implementations: Linear Regression, Random Forest, LSTM (with Keras)
+- Training-loss plot for LSTM
+- Model comparison table and plot (MSE, RMSE, R², training/inference time)
+- Random Forest feature importance analysis
+- Ablation study on input sequence length
+- Batch prediction across multiple tickers
+- One-day-ahead future price forecasts
 
-- Data fetching using `yfinance` library
-- Data preprocessing and sequence creation for time series prediction
-- Implementation of multiple prediction models:
-  - Linear Regression
-  - Random Forest
-  - Neural Network (MLPRegressor as LSTM substitute)
-- Model evaluation and comparison
-- Feature importance analysis
-- Ablation studies on sequence length effects
-- Future price prediction
-
-## Project Structure
-
-```
-stock-prediction-model/
-├── data/                  # Stock data and generated plots
-├── models/                # Saved trained models
-├── src/                   # Source code
-│   ├── data_loader.py     # Functions for loading and processing stock data
-│   ├── models.py          # Model implementations and evaluation functions
-│   └── main.py            # Main script to run the complete workflow
-├── requirements.txt       # Python dependencies
-├── stock_prediction_analysis.ipynb  # Jupyter notebook for analysis
-└── README.md              # Project documentation
-```
+## Prerequisites
+- Python 3.8+ (tested on 3.10/3.12)
+- Windows / Linux / macOS
 
 ## Installation
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/stock-prediction-model.git
-cd stock-prediction-model
-```
+# create and activate virtual environment (optional but recommended)
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 
-2. Install dependencies:
-```bash
+# install dependencies
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Running the Main Script
-
-To run the complete stock prediction workflow:
-
 ```bash
-python src/main.py
+# run full analysis on a single stock (AAPL) and then multiple tickers
+python -u src/main.py
 ```
 
-This will:
-- Download or load Apple stock data
-- Visualize the data
-- Train and evaluate multiple prediction models
-- Compare model performance
-- Make predictions for future stock prices
+By default, the script saves all figures and CSVs under `results/`. To change tickers or parameters, edit the bottom of `src/main.py` or wrap it with your own CLI.
 
-### Exploring with Jupyter Notebook
+## Project Structure
+```
+LICENSE.txt
+README.md
+requirements.txt
+stock_prediction_analysis.ipynb   # exploratory notebook
+stock_prediction_project_rubric.txt
 
-To run the Jupyter notebook for interactive analysis:
-
-```bash
-jupyter notebook stock_prediction_analysis.ipynb
+data/                              # cached raw CSVs
+results/                           # generated plots and tables
+src/                               # source code
+  ├── data_loader.py               # download, load, preprocess stock data
+  ├── data_processor.py            # (empty/deprecated)
+  ├── main.py                      # orchestrates workflow
+  ├── models.py                    # model implementations and plotting
+  └── utilities.py                 # (empty/deprecated)
 ```
 
-## Results
+## Outputs
+All output files are saved in `results/`:
+- `*_stock_price.png`: raw close-price time series
+- `*_predictions.png`: actual vs predicted on test set
+- `lstm_training_loss.png`: training and validation loss curves
+- `*_model_comparison.png` & `.csv`: comparison metrics
+- `*_feature_importance.png` & `.csv`: top RF lag features
+- `*_ablation_study.png` & `.csv`: performance vs sequence length
+- `multiple/`: batch run across tickers
 
-The models are evaluated using several metrics:
-- Mean Squared Error (MSE)
-- Mean Absolute Error (MAE)
-- Root Mean Squared Error (RMSE)
-- R² Score
+## Results Interpretation
+- **Normalized vs Real-scale metrics**: both reported (MSE/RMSE) for model evaluation
+- **Overfitting/Underfitting**: inspect LSTM loss curves for divergence
+- **Ablation Study**: understand how lookback window affects accuracy
 
-Our experiments found that:
-- Linear Regression performs surprisingly well for short-term stock price prediction
-- Different sequence lengths affect prediction accuracy
-- Recent days have more predictive power than older data points
+## Customization
+- Change `ticker`, `sequence_length`, `test_size` in `src/main.py`
+- Add new tickers or modify models by editing `src/models.py`
 
-## Contributors
+## Report
+Write your 3+ page final report (Word or LaTeX) including:
+- Group members & contributions
+- Introduction & problem description
+- Literature review (3+ related papers)
+- ML models & methods
+- Experiment results (tables/figures)
+- Conclusion
 
-Taha, Akshnoor, Rami
+Export your notebook or figures into the report and submit PDF before the deadline.
+
+## Authors
+- Group member A: major implementation & report writing
+- Group member B: model evaluation & analysis
+- Group member C: data processing & visualization
 
 ## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is MIT licensed. See [LICENSE.txt](LICENSE.txt).

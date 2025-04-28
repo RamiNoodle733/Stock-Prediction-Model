@@ -118,7 +118,8 @@ def run_stock_prediction(ticker='AAPL', sequence_length=60, test_size=0.2, outpu
     print("\nStep 6: Comparing model performance...")
     models = [lr_model, rf_model, lstm_model]
     comparison_df = compare_models(
-        models, X_test, y_test, 
+        models, X_test, y_test,
+        scaler=scaler,
         save_path=os.path.join(output_dir, f"{ticker}_model_comparison.png")
     )
     
@@ -128,7 +129,10 @@ def run_stock_prediction(ticker='AAPL', sequence_length=60, test_size=0.2, outpu
     
     # Print comparison table
     print("\nModel Comparison:")
-    print(comparison_df[['MSE', 'RMSE', 'R²', 'Training Time']])
+    print(comparison_df[[
+        'MSE_norm', 'RMSE_norm', 'MSE_real', 'RMSE_real',
+        'R²', 'Training Time'
+    ]])
     
     # Step 7: Feature importance analysis (for Random Forest)
     print("\nStep 7: Analyzing feature importance...")
@@ -186,8 +190,8 @@ def run_ablation_study(data, ticker, output_dir):
         # Store results
         results.append({
             'Sequence Length': seq_len,
-            'MSE': metrics['MSE'],
-            'RMSE': metrics['RMSE'],
+            'MSE': metrics['MSE_norm'],
+            'RMSE': metrics['RMSE_norm'],  # Changed from 'RMSE' to 'RMSE_norm' to match key in metrics dict
             'R²': metrics['R²'],
             'Training Time': metrics['Training Time']
         })
@@ -253,7 +257,7 @@ def run_multi_stock_analysis():
         run_stock_prediction(ticker=ticker, output_dir=output_dir)
 
 def run_multiple_stock_prediction(tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'], 
-                           output_dir='results',
+                           output_dir='results/multiple',
                            sequence_length=60,
                            test_size=0.2):
     """
@@ -268,6 +272,9 @@ def run_multiple_stock_prediction(tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSL
     print("=" * 70)
     print(f"MULTIPLE STOCK PREDICTION COMPARISON")
     print("=" * 70)
+    
+    # Create the output directory
+    os.makedirs(output_dir, exist_ok=True)
     
     # Create a dictionary to store results for each ticker
     all_results = {}
@@ -292,7 +299,10 @@ def run_multiple_stock_prediction(tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSL
             
             # Prepare data
             X_train, X_test, y_train, y_test, scaler = prepare_data(
-                data, sequence_length=sequence_length, test_size=test_size
+                data, 
+                target_col='Close',
+                sequence_length=sequence_length, 
+                test_size=test_size
             )
             
             # Train Linear Regression model (fastest and most reliable)
@@ -305,8 +315,8 @@ def run_multiple_stock_prediction(tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSL
             
             # Store results
             all_results[ticker] = {
-                'MSE': metrics['MSE'],
-                'RMSE': metrics['RMSE'],
+                'MSE_norm': metrics['MSE_norm'],
+                'RMSE_norm': metrics['RMSE_norm'],
                 'R²': metrics['R²'],
                 'Training Time': metrics['Training Time']
             }
@@ -331,30 +341,35 @@ def run_multiple_stock_prediction(tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSL
     results_df.to_csv(results_path)
     print(f"Results saved to {results_path}")
     
-    # Visualize comparison
-    plt.figure(figsize=(12, 8))
+    # Visualize comparison if we have data
+    if not results_df.empty:
+        plt.figure(figsize=(12, 8))
+        
+        # Plot RMSE comparison
+        plt.subplot(2, 1, 1)
+        results_df['RMSE_norm'].plot(kind='bar')
+        plt.title('RMSE Comparison Across Stocks')
+        plt.ylabel('RMSE (lower is better)')
+        plt.grid(True, axis='y')
+        
+        # Plot R² comparison
+        plt.subplot(2, 1, 2)
+        results_df['R²'].plot(kind='bar')
+        plt.title('R² Comparison Across Stocks')
+        plt.ylabel('R² (higher is better)')
+        plt.grid(True, axis='y')
+        
+        plt.tight_layout()
+        
+        # Save comparison plot
+        comparison_plot_path = os.path.join(output_dir, "stock_model_comparison.png")
+        plt.savefig(comparison_plot_path)
+        print(f"Comparison plot saved to {comparison_plot_path}")
+        plt.close()
+    else:
+        print("Warning: Not enough data to create comparison plots")
     
-    # Plot RMSE comparison
-    plt.subplot(2, 1, 1)
-    results_df['RMSE'].plot(kind='bar')
-    plt.title('RMSE Comparison Across Stocks')
-    plt.ylabel('RMSE (lower is better)')
-    plt.tight_layout()
-    
-    # Plot R² comparison
-    plt.subplot(2, 1, 2)
-    results_df['R²'].plot(kind='bar')
-    plt.title('R² Comparison Across Stocks')
-    plt.ylabel('R² (higher is better)')
-    plt.tight_layout()
-    
-    # Save comparison plot
-    comparison_plot_path = os.path.join(output_dir, "stock_model_comparison.png")
-    plt.savefig(comparison_plot_path)
-    print(f"Comparison plot saved to {comparison_plot_path}")
-    plt.close()
-    
-    return all_results
+    return results_df
 
 if __name__ == "__main__":
     # Choose which analysis to run

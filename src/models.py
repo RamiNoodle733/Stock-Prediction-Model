@@ -57,26 +57,41 @@ class BaseModel:
         y_pred = self.predict(X_test)
         inference_time = time.time() - start_time
         
-        # Calculate metrics
+        # Calculate normalized metrics
         mse = mean_squared_error(y_test, y_pred)
         mae = mean_absolute_error(y_test, y_pred)
         rmse = np.sqrt(mse)
         r2 = r2_score(y_test, y_pred)
         
         metrics = {
-            'MSE': mse,
-            'MAE': mae,
-            'RMSE': rmse,
+            'MSE_norm': mse,
+            'MAE_norm': mae,
+            'RMSE_norm': rmse,
             'R²': r2,
             'Training Time': self.training_time,
             'Inference Time': inference_time
         }
         
+        # Calculate real-scale metrics if scaler is provided
+        if scaler is not None:
+            true_scaled = scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+            pred_scaled = scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
+            mse_real = mean_squared_error(true_scaled, pred_scaled)
+            rmse_real = np.sqrt(mse_real)
+            metrics.update({
+                'MSE_real': mse_real,
+                'RMSE_real': rmse_real
+            })
+        
         # Print evaluation results
-        print(f"\n{self.name} Model Evaluation:")
-        print(f"MSE: {mse:.6f}")
-        print(f"MAE: {mae:.6f}")
-        print(f"RMSE: {rmse:.6f}")
+        print(f"\n{self.name} Model Evaluation (normalized):")
+        print(f"  MSE_norm: {mse:.6f}")
+        print(f"  MAE_norm: {mae:.6f}")
+        print(f"  RMSE_norm: {rmse:.6f}")
+        if scaler is not None:
+            print(f"{self.name} Model Evaluation (real scale):")
+            print(f"  MSE_real: {metrics['MSE_real']:.6f}")
+            print(f"  RMSE_real: {metrics['RMSE_real']:.6f}")
         print(f"R²: {r2:.6f}")
         print(f"Training Time: {self.training_time:.2f} seconds")
         print(f"Inference Time: {inference_time:.6f} seconds")
