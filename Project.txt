@@ -1,0 +1,112 @@
+Stock Market Prediction Using Machine Learning
+Final Report
+Date: April 28, 2025
+
+Group Members and Individual Contributions
+-----------------------------------------
+Taha Amir, Akshnoor Singh, Rami Abdelrazzaq
+
+Introduction and Problem Description
+-----------------------------------
+Stock market prediction is a challenging and widely studied problem in finance and machine learning. Accurate forecasting of future stock prices can provide significant advantages for investors, traders, and financial institutions. However, the stock market is influenced by a multitude of factors, including historical prices, economic indicators, and market sentiment, making prediction a complex task.
+
+In this project, we focus on predicting future stock prices using only historical daily price data for NASDAQ-listed companies. The dataset, sourced from Yahoo Finance via the yfinance Python package, contains daily open, high, low, close, and volume data for all currently trading NASDAQ tickers. Our goal is to train and evaluate several machine learning models to forecast the next-day closing price based on historical price sequences.
+
+The main objectives of this project are:
+- To preprocess and analyze historical stock data
+- To implement and compare multiple machine learning models for stock price prediction
+- To evaluate model performance using standard regression metrics
+- To analyze the effects of input sequence length and feature importance
+- To provide insights and recommendations based on experimental results
+
+Literature Review
+-----------------
+Stock market prediction has been extensively studied using a variety of machine learning and deep learning techniques. Below are summaries of three relevant studies:
+
+1. Fischer, T., & Krauss, C. (2018). Deep learning with long short-term memory networks for financial market predictions. European Journal of Operational Research, 270(2), 654-669.
+   - This paper demonstrates the effectiveness of LSTM networks for stock price prediction, showing that LSTMs outperform traditional machine learning models on financial time series data.
+
+2. Patel, J., Shah, S., Thakkar, P., & Kotecha, K. (2015). Predicting stock and stock price index movement using Trend Deterministic Data Preparation and machine learning techniques. Expert Systems with Applications, 42(1), 259-268.
+   - The authors compare multiple machine learning models, including Random Forest, SVM, and Neural Networks, for stock price movement prediction. They find that ensemble methods like Random Forest often yield better results than single models.
+
+3. Nelson, D. M., Pereira, A. C. M., & de Oliveira, R. A. (2017). Stock market's price movement prediction with LSTM neural networks. International Joint Conference on Neural Networks (IJCNN), 1419-1426.
+   - This study applies LSTM neural networks to stock price prediction and highlights the importance of sequence length and data preprocessing for model performance.
+
+These studies highlight the potential of deep learning models, especially LSTM networks, for capturing temporal dependencies in financial data, while also noting the value of traditional machine learning models and careful data preparation.
+
+Machine Learning Models, Methods, or Algorithms
+----------------------------------------------
+
+**Data Preprocessing**
+- The raw stock data was loaded and cleaned to handle missing values and non-standard formats.
+- The closing price was selected as the prediction target.
+- Data was normalized to improve model convergence.
+- For each stock, input sequences of fixed length (e.g., 60 days) were created to predict the next day's closing price.
+- The data was split into training and testing sets (typically 80% train, 20% test).
+
+**Models Implemented**
+- *Linear Regression*: A simple regression model that predicts the next closing price as a linear combination of previous prices.
+- *Random Forest*: An ensemble of decision trees that can capture non-linear relationships in the data.
+- *LSTM Neural Network*: A type of recurrent neural network (RNN) designed to capture temporal dependencies in sequential data. LSTM is well-suited for time series prediction tasks like stock prices.
+
+**Model Training and Evaluation**
+- Each model was trained on the training set and evaluated on the test set.
+- The following metrics were used to assess performance:
+  - Mean Squared Error (MSE)
+  - Root Mean Squared Error (RMSE)
+  - Mean Absolute Error (MAE)
+  - Coefficient of Determination (R²)
+- Training time and inference time were also recorded for computational analysis.
+
+**Hyperparameter and Feature Analysis**
+- An ablation study was conducted to analyze the effect of input sequence length on model performance.
+- Feature importance was analyzed for the Random Forest model to identify which historical days contributed most to predictions.
+
+Experiment Results
+-----------------
+
+**Model Performance Comparison**
+The performance of Linear Regression, Random Forest, and LSTM models was evaluated on the AAPL stock. The results are summarized in the table and figure below:
+
+- See: `results/AAPL_model_comparison.csv` and `results/AAPL_model_comparison.png`
+
+Linear Regression achieved the best performance with the lowest RMSE and highest R². Random Forest underperformed, likely due to the high dimensionality and temporal nature of the data. LSTM performed well but did not surpass Linear Regression on this dataset.
+
+**Training Loss Trajectory**
+The LSTM model's training loss over epochs is shown below:
+- See: `results/lstm_training_loss.png`
+
+The loss curve indicates stable convergence without significant overfitting.
+
+**Ablation Study: Sequence Length**
+An ablation study was conducted to analyze the effect of input sequence length on model performance. Results are shown below:
+- See: `results/AAPL_ablation_study.png` and `results/AAPL_ablation_study.csv`
+
+Shorter sequence lengths (e.g., 10 days) provided slightly better performance, suggesting that recent price history is most informative for next-day prediction.
+
+**Feature Importance (Random Forest)**
+The most important lag features for the Random Forest model are visualized below:
+- See: `results/AAPL_feature_importance.png` and `results/AAPL_feature_importance.csv`
+
+The model relies most heavily on the most recent days in the input sequence.
+
+**Multi-Stock Comparison**
+The Linear Regression model was also evaluated on MSFT, GOOGL, AMZN, and TSLA. Results are summarized in:
+- See: `results/multiple/stock_comparison.csv` and `results/multiple/stock_model_comparison.png`
+
+All stocks showed strong predictive performance, with TSLA exhibiting the highest R², likely due to its more pronounced trends.
+
+**Computational Efficiency**
+Training and inference times were recorded for each model. Linear Regression was the fastest, while LSTM and Random Forest required more computation. See the model comparison CSV for details.
+
+**Overfitting/Underfitting Analysis**
+The LSTM loss curve and test metrics indicate no severe overfitting or underfitting. However, more complex models did not outperform simpler ones, suggesting the dataset may not benefit from deep architectures without additional features.
+
+Conclusion
+----------
+This project explored the use of machine learning models for stock price prediction using historical NASDAQ data. We implemented and compared Linear Regression, Random Forest, and LSTM models. Our experiments showed that, for this dataset, the simple Linear Regression model outperformed more complex models in terms of both accuracy and computational efficiency. The LSTM model, while effective at capturing temporal dependencies, did not provide a significant advantage, and Random Forest struggled with the sequential nature of the data.
+
+Ablation studies revealed that shorter input sequences yielded better results, and feature importance analysis confirmed that recent price history is most predictive. The project also demonstrated the importance of careful data preprocessing and model evaluation using multiple metrics.
+
+In future work we could explore the integration of additional features (such as news sentiment or macroeconomic indicators), more advanced deep learning architectures, and the use of external data sources to further improve prediction accuracy.
+
