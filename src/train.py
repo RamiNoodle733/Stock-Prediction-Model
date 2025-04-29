@@ -266,7 +266,18 @@ def save_training_history(history, model_type, output_dir, symbol):
     
     # Save history to CSV
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    history_df = pd.DataFrame(history)  # history is already a dictionary
+    
+    # Fix for different length arrays: ensure all arrays have the same length
+    max_length = max(len(v) for v in history.values())
+    history_fixed = {}
+    for key, values in history.items():
+        if len(values) < max_length:
+            # Pad shorter arrays with NaN values
+            history_fixed[key] = values + [float('nan')] * (max_length - len(values))
+        else:
+            history_fixed[key] = values
+    
+    history_df = pd.DataFrame(history_fixed)
     history_csv_path = os.path.join(output_dir, f"{symbol}_{model_type}_history_{timestamp}.csv")
     history_df.to_csv(history_csv_path, index=False)
     

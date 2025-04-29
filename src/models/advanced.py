@@ -201,9 +201,25 @@ class LSTMModel:
         self.model.eval()
         with torch.no_grad():
             y_pred_scaled = self.model(X_tensor).cpu().numpy()
+            
+        # Print raw scaled output range for debugging
+        print(f"Raw scaled output range: [{np.min(y_pred_scaled):.4f}, {np.max(y_pred_scaled):.4f}]")
+        
+        # Reshape to ensure it's a 2D array with shape (n_samples, 1)
+        y_pred_scaled = y_pred_scaled.reshape(-1, 1)
         
         # Inverse transform to original scale
         y_pred = self.y_scaler.inverse_transform(y_pred_scaled)
+        
+        # Flatten to 1D array
+        y_pred = y_pred.flatten()
+        
+        # Print inverse-scaled output range for debugging
+        print(f"After inverse scaling: [{np.min(y_pred):.2f}, {np.max(y_pred):.2f}]")
+        
+        # Check for prediction collapse
+        if y_pred.max() - y_pred.min() < 10:
+            print("WARNING: Predictions collapsed to a narrow band; check your scaler or model capacity.")
         
         return y_pred
 
@@ -405,9 +421,25 @@ class TransformerModel:
         self.model.eval()
         with torch.no_grad():
             y_pred_scaled = self.model(X_tensor).cpu().numpy()
+            
+        # Print raw scaled output range for debugging
+        print(f"Raw scaled output range: [{np.min(y_pred_scaled):.4f}, {np.max(y_pred_scaled):.4f}]")
+        
+        # Reshape to ensure it's a 2D array with shape (n_samples, 1)
+        y_pred_scaled = y_pred_scaled.reshape(-1, 1)
         
         # Inverse transform to original scale
         y_pred = self.y_scaler.inverse_transform(y_pred_scaled)
+        
+        # Flatten to 1D array
+        y_pred = y_pred.flatten()
+        
+        # Print inverse-scaled output range for debugging
+        print(f"After inverse scaling: [{np.min(y_pred):.2f}, {np.max(y_pred):.2f}]")
+        
+        # Check for prediction collapse
+        if y_pred.max() - y_pred.min() < 10:
+            print("WARNING: Predictions collapsed to a narrow band; check your scaler or model capacity.")
         
         return y_pred
 

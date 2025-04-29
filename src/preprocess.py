@@ -32,6 +32,10 @@ def preprocess_stock_data(df, symbol):
     if 'Date' not in df.columns and 0 in df.columns:
         df = df.rename(columns={0: 'Date'})
     
+    # Convert Date to datetime if it's not already
+    if not pd.api.types.is_datetime64_any_dtype(df['Date']):
+        df['Date'] = pd.to_datetime(df['Date'])
+    
     # Convert numeric columns to float
     numeric_cols = ['Close', 'High', 'Low', 'Open', 'Volume']
     for col in numeric_cols:
@@ -53,23 +57,37 @@ def preprocess_stock_data(df, symbol):
     
     # Calculate rolling statistics
     for window in [5, 10, 20, 50]:
-        # Rolling mean of close price
-        df[f'Close_MA_{window}'] = df['Close'].rolling(window=window).mean()
+        # Rolling mean of close price (Simple Moving Average)
+        df[f'Close_SMA_{window}'] = df['Close'].rolling(window=window).mean()
         
         # Rolling standard deviation of close price
         df[f'Close_STD_{window}'] = df['Close'].rolling(window=window).std()
         
         # Rolling mean of volume
-        df[f'Volume_MA_{window}'] = df['Volume'].rolling(window=window).mean()
+        df[f'Volume_SMA_{window}'] = df['Volume'].rolling(window=window).mean()
         
         # Price momentum (percentage change over window)
         df[f'Momentum_{window}'] = df['Close'].pct_change(periods=window)
+    
+    # Add Exponential Moving Averages (EMA)
+    for window in [5, 10, 20]:
+        df[f'Close_EMA_{window}'] = df['Close'].ewm(span=window, adjust=False).mean()
     
     # Calculate price difference between high and low (volatility indicator)
     df['HL_PCT'] = (df['High'] - df['Low']) / df['Close'] * 100.0
     
     # Calculate price difference between open and close
     df['OC_PCT'] = (df['Open'] - df['Close']) / df['Close'] * 100.0
+    
+    # Calculate True Range and Average True Range (ATR)
+    df['TrueRange'] = np.maximum(
+        df['High'] - df['Low'],
+        np.maximum(
+            np.abs(df['High'] - df['Close'].shift()),
+            np.abs(df['Low'] - df['Close'].shift())
+        )
+    )
+    df['ATR_14'] = df['TrueRange'].rolling(window=14).mean()
     
     # Add lag features (previous N days' close prices)
     for i in range(1, 6):  # Previous 5 days
@@ -82,7 +100,34 @@ def preprocess_stock_data(df, symbol):
     
     # Calculate RS and RSI
     rs = gain / loss
-    df['RSI'] = 100 - (100 / (1 + rs))
+    df['RSI_14'] = 100 - (100 / (1 + rs))
+    
+    # Calculate MACD (Moving Average Convergence Divergence)
+    ema12 = df['Close'].ewm(span=12, adjust=False).mean()
+    ema26 = df['Close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = ema12 - ema26
+    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+    
+    # Bollinger Bands
+    df['BB_Middle'] = df['Close'].rolling(window=20).mean()
+    df['BB_Upper'] = df['BB_Middle'] + 2 * df['Close'].rolling(window=20).std()
+    df['BB_Lower'] = df['BB_Middle'] - 2 * df['Close'].rolling(window=20).std()
+    df['BB_Width'] = (df['BB_Upper'] - df['BB_Lower']) / df['BB_Middle']
+    
+    # Volume indicators
+    df['Volume_Change'] = df['Volume'].pct_change()
+    df['Volume_MA_Ratio'] = df['Volume'] / df['Volume_SMA_20']
+    
+    # Calendar features
+    df['DayOfWeek'] = df['Date'].dt.dayofweek
+    df['Month'] = df['Date'].dt.month
+    df['DayOfMonth'] = df['Date'].dt.day
+    df['Quarter'] = df['Date'].dt.quarter
+    
+    # Create one-hot encoding for day of week
+    for i in range(5):  # 0 = Monday, 4 = Friday
+        df[f'DayOfWeek_{i}'] = (df['DayOfWeek'] == i).astype(int)
     
     # Drop rows with NaN values (due to rolling calculations)
     df = df.dropna()

@@ -111,16 +111,26 @@ def evaluate_model(model, X_test, y_test, model_type):
     if model_type == 'arima':
         y_pred = model.predict(steps=len(y_test))
     else:
+        # The predict method has been updated to properly handle inverse scaling
         y_pred = model.predict(X_test)
+        
+        # Verify that y_pred is a 1D array matching y_test
+        if hasattr(y_pred, 'shape') and len(y_pred.shape) > 1:
+            y_pred = y_pred.flatten()
     
     inference_time = time.time() - start_time
     
-    # Ensure predictions and actual values are 1D arrays
-    if hasattr(y_pred, 'shape') and len(y_pred.shape) > 1:
-        y_pred = y_pred.flatten()
-    
+    # Ensure y_test is also a 1D array
     if hasattr(y_test, 'shape') and len(y_test.shape) > 1:
         y_test = y_test.flatten()
+    
+    # Check for prediction collapse
+    if np.max(y_pred) - np.min(y_pred) < 10:
+        print("WARNING: Predictions collapsed to a narrow band; check your scaler or model capacity.")
+        
+    # Assert correct dimensions
+    assert y_pred.ndim == 1 and y_pred.shape[0] == len(y_test), \
+        f"Expected 1D array of length {len(y_test)}, got shape {y_pred.shape}"
     
     # Calculate metrics
     mse = mean_squared_error(y_test, y_pred)
