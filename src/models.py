@@ -112,6 +112,35 @@ class BaseModel:
         print(f"Model loaded from {filepath}")
 
 
+class NaiveBaseline(BaseModel):
+    """
+    Naive baseline model that simply predicts today's price as tomorrow's price
+    This represents the "persistence" model for comparison
+    """
+    def __init__(self):
+        super().__init__(name="Naive Baseline")
+        self.training_time = 0.0
+    
+    def fit(self, X_train, y_train):
+        """No training needed for naive model"""
+        self.training_time = 0.001
+        print(f"{self.name} model 'trained' in {self.training_time:.2f} seconds")
+        return self
+    
+    def predict(self, X_test):
+        """
+        Predict using the naive approach: tomorrow = today
+        Takes the last value in each sequence as the prediction
+        """
+        if len(X_test.shape) == 3:
+            # Take the last value in each sequence
+            return X_test[:, -1, 0]
+        else:
+            # For flattened data, try to extract last value of each sequence
+            sequence_length = X_test.shape[1] if len(X_test.shape) > 1 else 1
+            return X_test[:, sequence_length-1]
+
+
 class LinearRegressionModel(BaseModel):
     """Linear Regression model for stock price prediction"""
     
@@ -404,3 +433,51 @@ def compare_models(models_list, X_test, y_test, scaler=None, save_path=None):
     
     # Return comparison DataFrame
     return pd.DataFrame(results).T
+
+def evaluate_trading_metrics(y_true, y_pred, scaler=None):
+    """
+    Evaluate trading-specific metrics for model predictions
+    
+    Args:
+        y_true: True values (normalized)
+        y_pred: Predicted values (normalized)
+        scaler: Scaler used for inverse transformation
+        
+    Returns:
+        dict: Dictionary of trading metrics
+    """
+    metrics = {}
+    
+    # If we have a scaler, convert to price scale
+    if scaler is not None:
+        true_prices = scaler.inverse_transform(y_true.reshape(-1, 1)).flatten()
+        pred_prices = scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
+        
+        # Calculate price-based metrics
+        true_returns = np.diff(true_prices) / true_prices[:-1]  # daily returns
+        pred_returns = np.diff(pred_prices) / pred_prices[:-1]  # predicted returns
+        
+        # Directional accuracy (did we predict the direction correctly?)
+        true_direction = np.sign(true_returns)
+        pred_direction = np.sign(pred_returns)
+        directional_accuracy = np.mean(true_direction == pred_direction)
+        metrics['Directional Accuracy'] = directional_accuracy
+        
+        # Calculate return correlation (Pearson's r)
+        return_corr = np.corrcoef(true_returns, pred_returns)[0, 1]
+        metrics['Return Correlation'] = return_corr
+        
+        # Mean return error
+        mean_return_error = np.mean(np.abs(true_returns - pred_returns))
+        metrics['Mean Return Error'] = mean_return_error
+    
+    # Calculate differences between consecutive predictions
+    norm_changes_true = np.diff(y_true.flatten())
+    norm_changes_pred = np.diff(y_pred.flatten())
+    
+    # Direction match in normalized space (are changes in the same direction?)
+    direction_match = np.sign(norm_changes_true) == np.sign(norm_changes_pred)
+    norm_directional_accuracy = np.mean(direction_match)
+    metrics['Norm Directional Accuracy'] = norm_directional_accuracy
+    
+    return metrics

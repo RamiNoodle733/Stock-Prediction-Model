@@ -124,25 +124,35 @@ def create_sequences(data, sequence_length=60):
     
     return np.array(X), np.array(y)
 
-def prepare_data(data, target_col='Close', sequence_length=60, test_size=0.2):
+def prepare_data(data, target_col='Close', sequence_length=60, test_size=0.2, predict_returns=False):
     """
     Prepares stock data for modeling by:
     1. Selecting the target column
-    2. Scaling the data
-    3. Creating sequences
-    4. Splitting into train and test sets
+    2. Optionally converting to returns (percent change)
+    3. Scaling the data
+    4. Creating sequences
+    5. Splitting into train and test sets
     
     Args:
         data (pd.DataFrame): Stock data
         target_col (str): Target column to predict
         sequence_length (int): Number of time steps to use for input sequence
         test_size (float): Proportion of data to use for testing
+        predict_returns (bool): If True, predict returns instead of price levels
         
     Returns:
         tuple: (X_train, X_test, y_train, y_test, scaler)
     """
-    # Select target column and convert to numpy array
-    target_data = data[target_col].values.reshape(-1, 1)
+    # If predicting returns, calculate percent changes first
+    if predict_returns:
+        print("Preparing data to predict returns instead of price levels")
+        # Calculate returns - pct_change returns NaN for first row
+        returns = data[target_col].pct_change().fillna(0)
+        # Use returns as our target data
+        target_data = returns.values.reshape(-1, 1)
+    else:
+        # Select target column and convert to numpy array for price level prediction
+        target_data = data[target_col].values.reshape(-1, 1)
     
     # Scale the data
     scaler = MinMaxScaler(feature_range=(0, 1))
