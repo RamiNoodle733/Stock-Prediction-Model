@@ -180,13 +180,18 @@ class LSTMModel:
         Make predictions using the trained model.
         
         Args:
-            X (numpy.ndarray): Features to predict on, shape (n_samples, n_timesteps, n_features)
+            X (numpy.ndarray): Features to predict on, shape (n_samples, n_features) or (n_samples, n_timesteps, n_features)
                                
         Returns:
             numpy.ndarray: Predicted stock prices
         """
         if not self.is_fitted:
             raise ValueError("Model has not been fitted yet. Call fit() first.")
+        
+        # Check if X is 2D or 3D, and reshape if needed
+        if len(X.shape) == 2:
+            # Reshape 2D data to 3D: (samples, 1, features)
+            X = X.reshape(X.shape[0], 1, X.shape[1])
         
         # Scale features
         n_samples, n_timesteps, n_features = X.shape

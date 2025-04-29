@@ -32,15 +32,33 @@ def load_data(symbol, data_dir):
     Returns:
         tuple: X features, y targets, dates array
     """
-    data_file = os.path.join(data_dir, f"{symbol}_ml_ready.npz")
+    train_file = os.path.join(data_dir, f"{symbol}_train_scaled.npz")
+    val_file = os.path.join(data_dir, f"{symbol}_val_scaled.npz")
+    test_file = os.path.join(data_dir, f"{symbol}_test_scaled.npz")
     
-    if not os.path.exists(data_file):
-        raise FileNotFoundError(f"Processed data file not found: {data_file}")
+    if not (os.path.exists(train_file) and os.path.exists(val_file) and os.path.exists(test_file)):
+        raise FileNotFoundError(f"Processed data files not found for {symbol} in {data_dir}")
     
-    data = np.load(data_file)
-    X = data['X']
-    y = data['y']
-    dates = data['dates']
+    train_data = np.load(train_file)
+    val_data = np.load(val_file)
+    test_data = np.load(test_file)
+    
+    X_train = train_data['features']
+    y_train = train_data['targets']
+    dates_train = train_data['dates']
+    
+    X_val = val_data['features']
+    y_val = val_data['targets']
+    dates_val = val_data['dates']
+    
+    X_test = test_data['features']
+    y_test = test_data['targets']
+    dates_test = test_data['dates']
+    
+    # Combine all data for compatibility with existing split logic
+    X = np.concatenate([X_train, X_val, X_test], axis=0)
+    y = np.concatenate([y_train, y_val, y_test], axis=0)
+    dates = np.concatenate([dates_train, dates_val, dates_test], axis=0)
     
     return X, y, dates
 
@@ -90,6 +108,31 @@ def split_data(X, y, dates, test_size=0.2, validation_size=0.1, random_state=42,
     return X_train, X_val, X_test, y_train, y_val, y_test, dates_train, dates_val, dates_test
 
 
+def walk_forward_cv(X, y, n_splits=5):
+    """
+    Perform walk-forward cross-validation for time-series data.
+
+    Args:
+        X (numpy.ndarray): Feature array
+        y (numpy.ndarray): Target array
+        n_splits (int): Number of splits for cross-validation
+
+    Yields:
+        tuple: (X_train, X_val, y_train, y_val)
+    """
+    n_samples = len(X)
+    split_size = n_samples // (n_splits + 1)
+
+    for i in range(n_splits):
+        train_end = split_size * (i + 1)
+        val_end = train_end + split_size
+
+        X_train, X_val = X[:train_end], X[train_end:val_end]
+        y_train, y_val = y[:train_end], y[train_end:val_end]
+
+        yield X_train, X_val, y_train, y_val
+
+
 def train_model(model_type, X_train, y_train, X_val=None, y_val=None, **model_params):
     """
     Train a model of the specified type.
@@ -118,6 +161,13 @@ def train_model(model_type, X_train, y_train, X_val=None, y_val=None, **model_pa
         model.fit(y_train, X_train)
         
     elif model_type == 'lstm':
+        # Check dimensions and reshape if needed
+        if len(X_train.shape) == 2:
+            # Reshape 2D data to 3D: (samples, 1, features)
+            X_train = X_train.reshape(X_train.shape[0], 1, X_train.shape[1])
+            if X_val is not None:
+                X_val = X_val.reshape(X_val.shape[0], 1, X_val.shape[1])
+        
         n_samples, n_timesteps, n_features = X_train.shape
         
         units = model_params.get('units', 64)
@@ -144,6 +194,13 @@ def train_model(model_type, X_train, y_train, X_val=None, y_val=None, **model_pa
         )
         
     elif model_type == 'transformer':
+        # Check dimensions and reshape if needed
+        if len(X_train.shape) == 2:
+            # Reshape 2D data to 3D: (samples, 1, features)
+            X_train = X_train.reshape(X_train.shape[0], 1, X_train.shape[1])
+            if X_val is not None:
+                X_val = X_val.reshape(X_val.shape[0], 1, X_val.shape[1])
+        
         n_samples, n_timesteps, n_features = X_train.shape
         
         head_size = model_params.get('head_size', 256)
@@ -363,25 +420,47 @@ def main():
         'num_heads': args.num_heads,
     }
     
-    print(f"Training {args.model} model for {args.symbol}...")
-    print(f"Train set: {X_train.shape}, Validation set: {X_val.shape}, Test set: {X_test.shape}")
-    
-    model, history, training_time = train_model(
-        args.model, 
-        X_train, y_train, 
-        X_val, y_val, 
-        **model_params
-    )
-    
-    print(f"Training completed in {training_time:.2f} seconds")
-    
-    # Save the model and training history
-    model_path = save_model(model, args.model, model_dir, args.symbol)
-    print(f"Model saved to {model_path}")
-    
-    if history is not None:
-        history_path = save_training_history(history, args.model, args.output_dir, args.symbol)
-        print(f"Training history saved to {history_path}")
+    if args.time_based:
+        print("Performing walk-forward cross-validation...")
+        for fold, (X_train, X_val, y_train, y_val) in enumerate(walk_forward_cv(X, y)):
+            print(f"Fold {fold + 1}: Train set: {X_train.shape}, Validation set: {X_val.shape}")
+
+            model, history, training_time = train_model(
+                args.model, 
+                X_train, y_train, 
+                X_val, y_val, 
+                **model_params
+            )
+
+            print(f"Fold {fold + 1} training completed in {training_time:.2f} seconds")
+
+            # Save model and history for each fold
+            model_path = save_model(model, args.model, model_dir, f"{args.symbol}_fold{fold + 1}")
+            print(f"Model for fold {fold + 1} saved to {model_path}")
+
+            if history is not None:
+                history_path = save_training_history(history, args.model, args.output_dir, f"{args.symbol}_fold{fold + 1}")
+                print(f"Training history for fold {fold + 1} saved to {history_path}")
+    else:
+        print(f"Training {args.model} model for {args.symbol}...")
+        print(f"Train set: {X_train.shape}, Validation set: {X_val.shape}, Test set: {X_test.shape}")
+        
+        model, history, training_time = train_model(
+            args.model, 
+            X_train, y_train, 
+            X_val, y_val, 
+            **model_params
+        )
+        
+        print(f"Training completed in {training_time:.2f} seconds")
+        
+        # Save the model and training history
+        model_path = save_model(model, args.model, model_dir, args.symbol)
+        print(f"Model saved to {model_path}")
+        
+        if history is not None:
+            history_path = save_training_history(history, args.model, args.output_dir, args.symbol)
+            print(f"Training history saved to {history_path}")
 
 
 if __name__ == "__main__":

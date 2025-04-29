@@ -8,6 +8,7 @@ import argparse
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+from sklearn.preprocessing import MinMaxScaler
 
 
 def preprocess_stock_data(df, symbol):
@@ -41,6 +42,11 @@ def preprocess_stock_data(df, symbol):
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Cap extreme values in numeric columns
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = df[col].clip(upper=df[col].quantile(0.99))
     
     # Check for null values and handle them
     if df.isnull().sum().sum() > 0:
@@ -172,6 +178,29 @@ def create_supervised_data(df, window_size=20, forecast_horizon=1):
     return np.array(features), np.array(targets), np.array(dates)
 
 
+def split_data(df, train_ratio=0.7, val_ratio=0.15):
+    """
+    Split the data into train, validation, and test sets chronologically.
+
+    Args:
+        df (pd.DataFrame): Processed stock data.
+        train_ratio (float): Proportion of data for training.
+        val_ratio (float): Proportion of data for validation.
+
+    Returns:
+        tuple: (train_df, val_df, test_df)
+    """
+    n = len(df)
+    train_end = int(n * train_ratio)
+    val_end = train_end + int(n * val_ratio)
+
+    train_df = df.iloc[:train_end]
+    val_df = df.iloc[train_end:val_end]
+    test_df = df.iloc[val_end:]
+
+    return train_df, val_df, test_df
+
+
 def process_and_save(input_folder, output_folder, window_size=20, min_data_completeness=0.9):
     """
     Process all stock data files and save the processed datasets.
@@ -202,6 +231,8 @@ def process_and_save(input_folder, output_folder, window_size=20, min_data_compl
             df = pd.read_csv(file_path, skiprows=3, header=None, 
                             names=['Date', 'Close', 'High', 'Low', 'Open', 'Volume'])
             
+            print(f"Processing {symbol}: Data sample before preprocessing:\n{df.head()}")
+            
             # Check if data is sufficient
             expected_days = 252 * 10  # ~10 years of trading
             actual_days = len(df)
@@ -213,26 +244,45 @@ def process_and_save(input_folder, output_folder, window_size=20, min_data_compl
             
             # Preprocess data
             processed_df = preprocess_stock_data(df, symbol)
-            
-            # Save processed DataFrame
-            processed_path = os.path.join(output_folder, f"{symbol}_processed.csv")
-            processed_df.to_csv(processed_path, index=False)
-            
-            # Create supervised learning data
-            X, y, dates = create_supervised_data(processed_df, window_size=window_size)
-            
-            # Save as a structured dataset
-            structured_path = os.path.join(output_folder, f"{symbol}_ml_ready.npz")
-            np.savez(structured_path, X=X, y=y, dates=dates)
-            
+
+            # Split data into train, validation, and test sets
+            train_df, val_df, test_df = split_data(processed_df)
+
+            # Fit scalers only on training data
+            feature_scaler = MinMaxScaler()
+            target_scaler = MinMaxScaler()
+
+            train_features = train_df.drop(columns=['Date', 'Close'])
+            train_targets = train_df[['Close']]
+
+            feature_scaler.fit(train_features)
+            target_scaler.fit(train_targets)
+
+            # Scale features and targets for all splits
+            for split_name, split_df in zip(['train', 'val', 'test'], [train_df, val_df, test_df]):
+                features = feature_scaler.transform(split_df.drop(columns=['Date', 'Close']))
+                targets = target_scaler.transform(split_df[['Close']])
+
+                print(f"{symbol} features before scaling:\n{features[:5]}")
+                print(f"{symbol} targets before scaling:\n{targets[:5]}")
+
+                # Save scaled data
+                np.savez(
+                    os.path.join(output_folder, f"{symbol}_{split_name}_scaled.npz"),
+                    features=features,
+                    targets=targets,
+                    dates=split_df['Date'].values
+                )
+
             # Add to summary
             summary_data.append({
                 'Symbol': symbol,
                 'Days': len(processed_df),
                 'Start_Date': processed_df['Date'].min(),
                 'End_Date': processed_df['Date'].max(),
-                'Features': X.shape,
-                'Samples': len(y)
+                'Train_Samples': len(train_df),
+                'Val_Samples': len(val_df),
+                'Test_Samples': len(test_df)
             })
             
         except Exception as e:

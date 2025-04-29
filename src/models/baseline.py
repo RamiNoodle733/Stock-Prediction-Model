@@ -27,15 +27,20 @@ class LinearRegressionModel:
         Train the Linear Regression model on the given data.
         
         Args:
-            X_train (numpy.ndarray): Training features of shape (n_samples, n_timesteps, n_features)
+            X_train (numpy.ndarray): Training features of shape (n_samples, n_features) or (n_samples, n_timesteps, n_features)
             y_train (numpy.ndarray): Training targets of shape (n_samples,)
             
         Returns:
             self: The fitted model
         """
-        # Reshape 3D data to 2D for sklearn
-        n_samples, n_timesteps, n_features = X_train.shape
-        X_train_2d = X_train.reshape(n_samples, n_timesteps * n_features)
+        # Handle both 2D and 3D input data
+        if len(X_train.shape) == 3:
+            # Reshape 3D data to 2D for sklearn
+            n_samples, n_timesteps, n_features = X_train.shape
+            X_train_2d = X_train.reshape(n_samples, n_timesteps * n_features)
+        else:
+            # Already 2D
+            X_train_2d = X_train
         
         # Scale the data
         X_train_scaled = self.X_scaler.fit_transform(X_train_2d)
@@ -52,7 +57,7 @@ class LinearRegressionModel:
         Make predictions using the trained model.
         
         Args:
-            X (numpy.ndarray): Features to predict on, shape (n_samples, n_timesteps, n_features)
+            X (numpy.ndarray): Features to predict on, shape (n_samples, n_features) or (n_samples, n_timesteps, n_features)
                                
         Returns:
             numpy.ndarray: Predicted stock prices
@@ -60,9 +65,14 @@ class LinearRegressionModel:
         if not self.is_fitted:
             raise ValueError("Model has not been fitted yet. Call fit() first.")
         
-        # Reshape 3D data to 2D for sklearn
-        n_samples, n_timesteps, n_features = X.shape
-        X_2d = X.reshape(n_samples, n_timesteps * n_features)
+        # Handle both 2D and 3D input data
+        if len(X.shape) == 3:
+            # Reshape 3D data to 2D for sklearn
+            n_samples, n_timesteps, n_features = X.shape
+            X_2d = X.reshape(n_samples, n_timesteps * n_features)
+        else:
+            # Already 2D
+            X_2d = X
         
         # Scale the data
         X_scaled = self.X_scaler.transform(X_2d)

@@ -58,40 +58,34 @@ def load_model(model_path):
 def rescale_predictions(model, X_test, y_test, dates_test):
     """
     Generate and rescale predictions to match the actual price range.
-    
+
     Args:
         model: Trained LSTM model
         X_test: Test features
         y_test: Actual prices
         dates_test: Dates corresponding to test data
-        
+
     Returns:
         DataFrame with original and rescaled predictions
     """
     # Get original predictions
     orig_predictions = model.predict(X_test)
-    
-    # Get min/max values for actual and predicted
-    pred_min = np.min(orig_predictions)
-    pred_max = np.max(orig_predictions)
-    actual_min = np.min(y_test)
-    actual_max = np.max(y_test)
-    
-    # Define rescaling function
-    def rescale(pred_array):
-        return ((pred_array - pred_min) / (pred_max - pred_min)) * (actual_max - actual_min) + actual_min
-    
-    # Apply rescaling
-    rescaled_predictions = rescale(orig_predictions)
-    
+
+    # Ensure predictions are reshaped to 2D for inverse transform
+    if len(orig_predictions.shape) == 1:
+        orig_predictions = orig_predictions.reshape(-1, 1)
+
+    # Rescale predictions using the model's target scaler
+    rescaled_predictions = model.y_scaler.inverse_transform(orig_predictions)
+
     # Create DataFrame
     df = pd.DataFrame({
         'Date': dates_test,
-        'Actual': y_test,
+        'Actual': y_test.flatten(),
         'Original_Prediction': orig_predictions.flatten(),
         'Rescaled_Prediction': rescaled_predictions.flatten()
     })
-    
+
     return df
 
 
@@ -120,20 +114,25 @@ def main():
     print("Generating and rescaling predictions...")
     results_df = rescale_predictions(model, X_test, y_test, dates_test)
     
+    # Ensure all arrays are flattened and aligned
+    y_test_flat = y_test.flatten()
+    orig_pred_flat = results_df['Original_Prediction'].values
+    rescaled_pred_flat = results_df['Rescaled_Prediction'].values
+    
     # Calculate metrics
     from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
     
-    orig_mse = mean_squared_error(y_test, results_df['Original_Prediction'])
+    orig_mse = mean_squared_error(y_test_flat, orig_pred_flat)
     orig_rmse = np.sqrt(orig_mse)
-    orig_mae = mean_absolute_error(y_test, results_df['Original_Prediction'])
-    orig_r2 = r2_score(y_test, results_df['Original_Prediction'])
-    orig_mape = np.mean(np.abs((y_test - results_df['Original_Prediction']) / y_test)) * 100
+    orig_mae = mean_absolute_error(y_test_flat, orig_pred_flat)
+    orig_r2 = r2_score(y_test_flat, orig_pred_flat)
+    orig_mape = np.mean(np.abs((y_test_flat - orig_pred_flat) / y_test_flat)) * 100
     
-    rescaled_mse = mean_squared_error(y_test, results_df['Rescaled_Prediction'])
+    rescaled_mse = mean_squared_error(y_test_flat, rescaled_pred_flat)
     rescaled_rmse = np.sqrt(rescaled_mse)
-    rescaled_mae = mean_absolute_error(y_test, results_df['Rescaled_Prediction'])
-    rescaled_r2 = r2_score(y_test, results_df['Rescaled_Prediction'])
-    rescaled_mape = np.mean(np.abs((y_test - results_df['Rescaled_Prediction']) / y_test)) * 100
+    rescaled_mae = mean_absolute_error(y_test_flat, rescaled_pred_flat)
+    rescaled_r2 = r2_score(y_test_flat, rescaled_pred_flat)
+    rescaled_mape = np.mean(np.abs((y_test_flat - rescaled_pred_flat) / y_test_flat)) * 100
     
     print("\nMetrics comparison:")
     print(f"Original - RMSE: {orig_rmse:.4f}, MAE: {orig_mae:.4f}, R²: {orig_r2:.4f}, MAPE: {orig_mape:.4f}%")

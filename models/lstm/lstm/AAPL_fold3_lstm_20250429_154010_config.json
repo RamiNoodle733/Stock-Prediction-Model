@@ -1,0 +1,1 @@
+{"window_size": 52, "feature_dim": 1, "units": 50, "layers": 2, "dropout_rate": 0.2, "device": "cpu", "is_fitted": true}

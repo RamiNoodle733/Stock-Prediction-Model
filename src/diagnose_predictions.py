@@ -7,14 +7,22 @@ import numpy as np
 import pickle
 import torch
 import matplotlib.pyplot as plt
+import argparse
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from models.advanced import LSTMModel
 from train import load_data, split_data
 
 def main():
-    # Load data for AAPL
-    print('Loading AAPL data...')
-    X, y, dates = load_data('AAPL', '../data/processed')
+    parser = argparse.ArgumentParser(description="Diagnose prediction issues in stock price models")
+    parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model file")
+    parser.add_argument("--symbol", type=str, default="AAPL", help="Stock symbol")
+    parser.add_argument("--data_dir", type=str, default="data/processed", help="Data directory")
+    parser.add_argument("--output_dir", type=str, default="results", help="Output directory")
+    
+    args = parser.parse_args()
+    
+    print(f"Loading {args.symbol} data...")
+    X, y, dates = load_data(args.symbol, args.data_dir)
 
     # Split data to get test set (same as in training)
     print('Splitting data...')
@@ -22,7 +30,7 @@ def main():
 
     # Load model config and scalers
     print('Loading model config and scalers...')
-    model_path = '../models/lstm/AAPL_lstm_20250429_111302.pt'
+    model_path = args.model_path
     config_path = model_path.replace('.pt', '_config.json')
     scalers_path = model_path.replace('.pt', '_scalers.pkl')
 
@@ -59,10 +67,19 @@ def main():
     # Manually get the raw scaled predictions
     print('Getting raw scaled predictions...')
     # Scale features
-    n_samples, n_timesteps, n_features = X_test.shape
-    X_reshaped = X_test.reshape(-1, n_features)
-    X_scaled = model.X_scaler.transform(X_reshaped)
-    X_scaled = X_scaled.reshape(n_samples, n_timesteps, n_features)
+    if len(X_test.shape) == 2:
+        # Handle 2D data (samples, features)
+        print("Input data is 2D, reshaping to 3D for LSTM...")
+        n_samples, n_features = X_test.shape
+        n_timesteps = 1  # Just one timestep when data is 2D
+        X_scaled = model.X_scaler.transform(X_test)
+        X_scaled = X_scaled.reshape(n_samples, n_timesteps, n_features)
+    else:
+        # Handle 3D data (samples, timesteps, features)
+        n_samples, n_timesteps, n_features = X_test.shape
+        X_reshaped = X_test.reshape(-1, n_features)
+        X_scaled = model.X_scaler.transform(X_reshaped)
+        X_scaled = X_scaled.reshape(n_samples, n_timesteps, n_features)
 
     # Convert to PyTorch tensor and predict
     X_tensor = torch.FloatTensor(X_scaled).to(model.device)
@@ -71,6 +88,7 @@ def main():
 
     # Check shapes and values at each step
     print(f'X_test shape: {X_test.shape}')
+    print(f'X_scaled shape: {X_scaled.shape}')
     print(f'Raw scaled predictions shape: {y_pred_scaled.shape}')
     print(f'Raw scaled predictions range: [{np.min(y_pred_scaled):.4f}, {np.max(y_pred_scaled):.4f}]')
 
@@ -101,8 +119,8 @@ def main():
     print('\nSample predictions:')
     for i in range(min(5, len(y_test))):
         print(f'Sample {i}:')
-        print(f'  Actual: {y_test[i]:.4f}')
-        print(f'  Predicted Method 1: {y_pred_method1[i][0]:.4f}')
+        print(f'  Actual: {y_test[i][0]:.4f}')
+        print(f'  Predicted Method 1: {y_pred_method1[i]:.4f}')
         print(f'  Predicted Method 2: {y_pred_method2[i][0]:.4f}')
         print(f'  Predicted Method 3: {y_pred_method3[i][0]:.4f}')
 
@@ -120,7 +138,7 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig('../diagnosis_plot.png')
+    plt.savefig(os.path.join(args.output_dir, 'diagnosis_plot.png'))
     print('\nDiagnostic plot saved to diagnosis_plot.png')
 
     # Calculate metrics for each prediction method
@@ -157,7 +175,7 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig('../returns_reconstruction_plot.png')
+    plt.savefig(os.path.join(args.output_dir, 'returns_reconstruction_plot.png'))
     print('\nReturns reconstruction plot saved to returns_reconstruction_plot.png')
 
     # Print any other useful diagnostic information

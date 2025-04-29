@@ -104,6 +104,11 @@ def evaluate_model(model, X_test, y_test, model_type):
     Returns:
         tuple: Predictions, inference time, and evaluation metrics
     """
+    # For LSTM and transformer models, ensure X_test has the correct shape
+    if model_type in ['lstm', 'transformer'] and len(X_test.shape) == 2:
+        # Reshape 2D data to 3D (samples, 1, features) for sequence models
+        X_test = X_test.reshape(X_test.shape[0], 1, X_test.shape[1])
+    
     # Measure inference time
     start_time = time.time()
     
@@ -175,9 +180,28 @@ def plot_predictions(y_true, y_pred, dates, symbol, model_type, output_dir):
     
     plt.figure(figsize=(14, 7))
     
+    # Ensure all arrays are 1D
+    if hasattr(y_true, 'shape') and len(y_true.shape) > 1:
+        y_true = y_true.flatten()
+    
+    if hasattr(y_pred, 'shape') and len(y_pred.shape) > 1:
+        y_pred = y_pred.flatten()
+    
+    # Ensure dates is a 1D array matching y_true and y_pred
+    if hasattr(dates, 'shape') and len(dates.shape) > 1:
+        dates = dates.flatten()
+    
+    # Make sure dates, y_true, and y_pred all have the same length
+    min_len = min(len(y_true), len(y_pred), len(dates))
+    y_true = y_true[:min_len]
+    y_pred = y_pred[:min_len]
+    dates = dates[:min_len]
+    
     # Convert date strings to datetime if they're strings
     if isinstance(dates[0], str):
         dates = [pd.to_datetime(d) for d in dates]
+    elif isinstance(dates[0], bytes):
+        dates = [pd.to_datetime(d.decode('utf-8')) for d in dates]
     
     # Create DataFrame for easier plotting with dates
     df = pd.DataFrame({
