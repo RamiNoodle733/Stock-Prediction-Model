@@ -12,6 +12,10 @@ stock-prediction-model/
 ├── notebooks/
 │   ├── 1_data_exploration.ipynb    # Data analysis and visualization
 │   └── 2_model_prototyping.ipynb   # Model development and comparison
+├── models/             # Saved model files
+│   └── lstm/           # LSTM model files (.pt, _config.json, _scalers.pkl)
+├── results/            # Evaluation results
+│   └── figures/        # Generated prediction plots
 ├── reports/
 │   └── figures/        # Generated plots and visualizations
 ├── src/
@@ -44,34 +48,35 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Usage
+## Complete Guide to Running and Testing the Project
 
-### Data Collection
+This section provides a step-by-step guide to run the entire pipeline from data collection to model evaluation.
+
+### Step 1: Data Collection
 
 Download historical stock data from Yahoo Finance:
 
 ```bash
+# On Windows
 python src/fetch_data.py --symbol AAPL --start 2010-01-01 --end 2023-01-01 --out data/raw
+
+# Download multiple stocks at once
+python src/fetch_data.py --symbols AAPL MSFT GOOGL AMZN --start 2010-01-01 --end 2023-01-01 --out data/raw
 ```
 
 Options:
-- `--symbol`: Stock symbol to download (e.g., AAPL, MSFT, GOOG)
+- `--symbol` or `--symbols`: One or more stock symbols (e.g., AAPL, MSFT, GOOG)
 - `--start`: Start date in YYYY-MM-DD format
 - `--end`: End date in YYYY-MM-DD format
 - `--out`: Output directory for the downloaded data
-- `--limit`: Limit the number of stocks to download (useful for testing)
 
-To download data for multiple NASDAQ stocks:
-```bash
-python src/fetch_data.py --limit 10  # Download data for 10 NASDAQ stocks
-```
-
-### Data Preprocessing
+### Step 2: Data Preprocessing
 
 Process the raw data and generate features:
 
 ```bash
-python src/preprocess.py --in_folder data/raw --out_folder data/processed
+# On Windows
+python src\preprocess.py --in_folder data\raw --out_folder data\processed
 ```
 
 Options:
@@ -80,83 +85,140 @@ Options:
 - `--window_size`: Lookback window size in days (default: 20)
 - `--min_completeness`: Minimum data completeness requirement (default: 0.8)
 
-### Model Training
+This step creates:
+- Processed CSV files with technical indicators
+- NPZ files with machine learning-ready data
+- A processing_summary.csv with data statistics
 
-Train a prediction model:
+### Step 3: Model Training
+
+Train a prediction model using one of the available algorithms:
 
 ```bash
-python src/train.py --model lstm --symbol AAPL --data_dir data/processed --output_dir models
+# For Windows PowerShell
+python src\train.py --model lstm --symbol AAPL --data_dir data\processed --output_dir models
+
+# For Windows Command Prompt
+python src\train.py --model lstm --symbol AAPL --data_dir data\processed --output_dir models
 ```
 
-Options:
-- `--model`: Model type to train (linear, arima, lstm, transformer)
+Models available:
+- `linear`: Linear Regression (baseline)
+- `arima`: ARIMA time series model
+- `lstm`: Long Short-Term Memory neural network
+- `transformer`: Transformer-based neural network
+
+Important options:
+- `--model`: Type of model to train
 - `--symbol`: Stock symbol to train on
-- `--data_dir`: Directory with processed data
+- `--data_dir`: Directory with processed data (containing .npz files)
 - `--output_dir`: Output directory for trained models
-- `--epochs`: Number of training epochs for neural models
-- `--batch_size`: Batch size for training
-- `--window_size`: Window size for time series data
-- `--time_based`: Whether to use time-based train/test split
+- `--epochs`: Number of training epochs for neural models (default: 100)
+- `--batch_size`: Batch size for training (default: 32)
+- `--window_size`: Window size for time series data (default: 20)
+- `--time_based`: Whether to use time-based train/test split (default: True)
 
-### Model Evaluation
+When training completes, the model files will be saved in the output directory with the following naming pattern:
+- PyTorch models (.pt): `{symbol}_{model_type}_{timestamp}.pt`
+- Model configuration: `{symbol}_{model_type}_{timestamp}_config.json`
+- Data scalers: `{symbol}_{model_type}_{timestamp}_scalers.pkl`
 
-Evaluate and compare models:
+### Step 4: Model Evaluation
+
+Evaluate trained models and generate performance metrics and visualizations:
 
 ```bash
-python src/evaluate.py --models lstm transformer --model_paths models/lstm/AAPL_lstm_timestamp.h5 models/transformer/AAPL_transformer_timestamp.h5 --symbol AAPL
+# For Windows PowerShell
+python src\evaluate.py --models lstm --model_paths models\lstm\AAPL_lstm_TIMESTAMP.pt --symbol AAPL --data_dir data\processed --output_dir results
+
+# For Windows Command Prompt
+python src\evaluate.py --models lstm --model_paths models\lstm\AAPL_lstm_TIMESTAMP.pt --symbol AAPL --data_dir data\processed --output_dir results
 ```
 
-Options:
-- `--models`: List of model types to evaluate
+Replace `TIMESTAMP` with the actual timestamp in your model filename (e.g., `AAPL_lstm_20250429_032712.pt`).
+
+Important options:
+- `--models`: List of model types being evaluated
 - `--model_paths`: Paths to the trained model files
 - `--symbol`: Stock symbol to evaluate on
 - `--data_dir`: Directory with processed data
-- `--output_dir`: Output directory for results
-- `--ablation`: Run ablation studies
+- `--output_dir`: Output directory for results and figures
 
-### Jupyter Notebooks
+The evaluation will output:
+- Performance metrics (MSE, RMSE, MAE, R², MAPE)
+- Inference time measurement
+- Prediction plots saved to the output directory
 
-The project includes two Jupyter notebooks:
-
-1. **Data Exploration (1_data_exploration.ipynb)**:
-   - Visualize stock price data
-   - Analyze statistical properties
-   - Examine correlation and time series characteristics
-   - Explore feature engineering possibilities
-
-2. **Model Prototyping (2_model_prototyping.ipynb)**:
-   - Implement and compare different prediction models
-   - Evaluate performance using various metrics
-   - Visualize predictions and errors
-   - Conduct ablation studies to understand model behavior
-
-To run the notebooks:
-```bash
-jupyter notebook notebooks/1_data_exploration.ipynb
+Example output:
+```
+Evaluating LSTM model for AAPL...
+MSE: 5880.8608
+RMSE: 76.6868
+MAE: 74.3769
+R²: -15.3825
+MAPE: 46.7773%
+Inference time: 0.1006 seconds
+Saved prediction plot to results\figures\AAPL_lstm_predictions_20250429_035606.png
 ```
 
-## Models
+### Step 5: Comparing Multiple Models
 
-This project includes four types of stock prediction models:
+To compare different models side by side:
 
-1. **Linear Regression**: A simple baseline that predicts prices based on linear relationships.
+```bash
+# For Windows Command Prompt
+python src\evaluate.py --models linear lstm transformer --model_paths models\linear\AAPL_linear.pkl models\lstm\AAPL_lstm_TIMESTAMP.pt models\transformer\AAPL_transformer_TIMESTAMP.pt --symbol AAPL --data_dir data\processed --output_dir results
+```
 
-2. **ARIMA**: AutoRegressive Integrated Moving Average - a traditional time series forecasting model.
+This will generate:
+- Individual metrics for each model
+- Comparison bar charts for key metrics
+- Side-by-side prediction plots
 
-3. **LSTM**: Long Short-Term Memory networks - specialized RNNs capable of learning long-term dependencies.
+### Working with Jupyter Notebooks
 
-4. **Transformer**: Attention-based architecture that can capture complex patterns in sequential data.
+For interactive exploration and analysis:
 
-## Results
+1. Start Jupyter:
+```bash
+jupyter notebook
+```
 
-The models are evaluated using multiple metrics:
-- MSE (Mean Squared Error)
-- RMSE (Root Mean Squared Error)
-- MAE (Mean Absolute Error)
-- R² (Coefficient of Determination)
-- MAPE (Mean Absolute Percentage Error)
+2. Navigate to the `notebooks` folder and open:
+   - `1_data_exploration.ipynb` for data analysis
+   - `2_model_prototyping.ipynb` for interactive model development
 
-Performance comparisons and visualizations are saved to the `reports/figures` directory.
+## Troubleshooting
+
+### Common Issues and Solutions
+
+1. **Path Issues on Windows**:
+   - Use backslashes (`\`) for paths in Windows Command Prompt
+   - In PowerShell, avoid using `&&` for command chaining; use separate commands
+
+2. **Model Loading Errors**:
+   - Ensure you're using the correct model path with timestamp
+   - Verify that all model files exist (_config.json and _scalers.pkl)
+
+3. **Missing Data Files**:
+   - Run the preprocessing step if .npz files are missing
+   - Check processing_summary.csv to ensure data quality
+
+4. **CUDA/GPU Issues**:
+   - Add `--cpu` flag to train or evaluate commands to force CPU usage
+
+## Interpreting Results
+
+The evaluation produces several metrics:
+- **MSE/RMSE**: Lower values indicate better fit
+- **MAE**: Average absolute error in price predictions
+- **R²**: Value close to 1 indicates good fit; negative values indicate poor performance
+- **MAPE**: Error as percentage of actual values; lower is better
+
+Prediction plots show:
+- Actual prices (solid line)
+- Predicted prices (dashed line)
+- Error margin (shaded area)
 
 ## License
 
