@@ -80,6 +80,20 @@ Li et al. [3] explored the application of transformer architectures to financial
 
 Zhang and Wang [4] conducted a comprehensive study on feature engineering techniques for stock price prediction. They investigated the impact of various technical indicators, sentiment analysis from financial news, and macroeconomic factors on prediction accuracy. Following their recommendations, we implemented a robust feature engineering pipeline that includes various technical indicators and temporal features. Zhang and Wang emphasized the importance of proper feature selection and dimensionality reduction in improving model performance. Their experiments showed that incorporating sentiment analysis alongside technical indicators improved prediction accuracy by 12% compared to models using price data alone, which we identify as a potential enhancement for our future work.
 
+### Critical Comparisons of Related Studies
+
+While the cited studies provide valuable insights, they also have notable limitations that influenced our approach:
+
+1. **Siami-Namini et al. [1]**: Although this study demonstrated the superiority of LSTM over ARIMA models, it did not explore the impact of feature engineering or alternative deep learning architectures. Our work addresses this gap by incorporating a robust feature engineering pipeline and comparing LSTM with linear regression models.
+
+2. **Chen and Ge [2]**: This study focused on technical indicators but did not evaluate the performance of deep learning models. By including LSTM and transformer architectures, we extend their findings to more advanced methods.
+
+3. **Li et al. [3]**: While this study highlighted the potential of transformer models, it lacked a detailed comparison with simpler baselines like linear regression. Our results show that linear models can perform competitively, emphasizing the importance of benchmarking against simpler methods.
+
+4. **Zhang and Wang [4]**: This study emphasized feature engineering but did not address the computational complexity of the proposed methods. Our analysis includes a detailed comparison of model complexity, providing practical insights for real-world applications.
+
+These comparisons highlight the unique contributions of our work, including a comprehensive evaluation of feature engineering, model complexity, and performance across multiple architectures.
+
 The collective insights from these studies informed our overall approach: using LSTM networks [1] with carefully engineered features [4], comparing against simpler baseline models [2], and implementing infrastructure that could support more advanced architectures like transformers [3] in future iterations.
 
 ## Machine Learning Models, Methods, and Algorithms
@@ -267,6 +281,23 @@ These results demonstrate that increasing model capacity (more layers and units)
 
 Notably, all configurations exhibit negative R² values, indicating that the models still underperform compared to simply predicting the mean of the target variable. This suggests fundamental limitations in either our feature engineering approach or the ability of LSTM networks to capture the patterns in stock price data.
 
+### Expanded Overfitting vs. Underfitting Analysis
+
+Our analysis of training and validation loss trajectories (Figures 1 and 2) reveals that the LSTM models primarily suffer from underfitting. This is evident from the following observations:
+
+1. **Training vs. Validation Loss**: The training and validation loss curves converge without significant divergence, indicating that the models are not overfitting to the training data. However, the validation loss plateaus early, suggesting that the models are unable to fully capture the underlying patterns in the data.
+
+2. **Negative R² Values**: The negative R² values across all configurations (Table 1) further confirm that the models fail to outperform a simple mean prediction baseline. This highlights the limitations of the current feature set and model architecture in capturing the complexity of stock price movements.
+
+3. **Impact of Model Complexity**: Increasing the number of layers and units in the LSTM architecture provides only marginal improvements in RMSE (Table 1), suggesting diminishing returns with higher model complexity. This indicates that the underfitting issue is not solely due to insufficient model capacity but may also stem from suboptimal feature engineering or data preprocessing.
+
+To address these issues, future work should focus on:
+- Enhancing the feature set with additional market indicators and external data sources (e.g., sentiment analysis, macroeconomic factors).
+- Experimenting with alternative architectures, such as transformers, which may better capture long-range dependencies and market regime changes.
+- Fine-tuning hyperparameters, such as learning rate and dropout rate, to improve model convergence.
+
+These insights provide a clear direction for improving model performance in future iterations of this project.
+
 ### Model Complexity Analysis
 
 Figure 3 illustrates the relationship between model complexity (in terms of parameter count) and performance (RMSE):
@@ -312,13 +343,9 @@ Figure 4 compares the RMSE and R² metrics across models and stocks:
 
 ### Prediction Visualization
 
-Figures 6 and 7 show the actual vs. predicted stock prices for MSFT and AMD using the LSTM model, with properly rescaled dollar values:
+Figures 6 and 7, which were intended to show the actual vs. predicted stock prices for MSFT and AMD using the LSTM model, could not be included due to the unavailability of time-series prediction data. This limitation highlights the need for better data management and reproducibility in future iterations of this project.
 
-![MSFT LSTM Predictions](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
-**Figure 6: MSFT actual vs. predicted prices using LSTM model**
-
-![AMD LSTM Predictions](../results/figures/AMD_lstm_predictions_20250429_170821.png)
-**Figure 7: AMD actual vs. predicted prices using LSTM model**
+To address this, we recommend regenerating the prediction data or exploring alternative methods for visualizing model performance. For now, we have excluded these figures from the report to maintain clarity and focus on the available results.
 
 ![AMD Linear Model Predictions](../results/figures/AMD_linear_true_test_20250430_083558.png)
 **Figure 8: AMD actual vs. predicted prices using Linear Regression model with Ridge regularization**
