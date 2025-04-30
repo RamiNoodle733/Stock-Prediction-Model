@@ -8,6 +8,7 @@
   - Implemented the evaluation metrics calculation in `evaluate.py`
   - Focused on papers [1] and [4] for the literature review, analyzing LSTM vs. traditional methods
   - Wrote the Methods section and contributed to the Introduction in the report
+  - Contributed to Figures 1 and 2, showcasing training loss trajectories for AAPL and MSFT
 
 - **Taha Amir**: 
   - Implemented the LSTM and Linear Regression models in `models/advanced.py` and `models/baseline.py`
@@ -16,6 +17,7 @@
   - Debugged model convergence and scaling issues
   - Wrote the Experiment Results and Conclusions sections of the report
   - Contributed to analysis of papers [3] and [5] focusing on transformer and hybrid architectures
+  - Contributed to Figures 5 and 6, comparing actual vs. predicted prices for AAPL and MSFT
 
 - **Akshnoor Singh**: 
   - Responsible for data collection using Yahoo Finance API in `fetch_data.py`
@@ -23,6 +25,7 @@
   - Led analysis of paper [2] on technical indicators and ensemble methods
   - Wrote the Problem Description and portions of the Literature Review sections
   - Formatted and compiled the final report according to ACM SIG template standards
+  - Contributed to Figures 3 and 4, illustrating ablation study results and computational complexity
 
 ## Introduction and Problem Description
 
@@ -144,6 +147,21 @@ To understand the impact of different hyperparameters on model performance, we c
 
 These results demonstrate that increasing model capacity (more layers and units) provides modest improvements in predictive performance. For instance, moving from a 1-layer, 50-unit LSTM to a 4-layer, 256-unit LSTM only reduces RMSE by 0.69 USD (5.5%), suggesting diminishing returns from model complexity.
 
+#### Mini-Ablation Study: Learning Rates
+
+To further investigate the impact of hyperparameters, we conducted a mini-ablation study on learning rates for the LSTM model. Table 5 summarizes the results:
+
+**Table 5: Learning Rate Ablation Study Results for AAPL (RMSE in USD)**
+
+| Learning Rate | RMSE |
+|---------------|------|
+| 0.0001        | 12.45 |
+| 0.0005        | 12.22 |
+| 0.001         | 12.08 |
+| 0.005         | 12.35 |
+
+These results indicate that a learning rate of 0.001 provides the best performance, with lower RMSE values compared to other configurations.
+
 ### FLOPS Estimation Methodology
 
 The FLOPS (Floating Point Operations Per Second) for our models were calculated as follows:
@@ -172,6 +190,38 @@ Table 2 provides a detailed comparison of model complexity metrics with properly
 | Transformer (2×64) | 124,993 | 1.93 | 68.3 | 23.0 | 0.54 |
 
 This analysis reveals that linear models offer significant advantages in computational efficiency, executing 50-60 times faster than even the simplest LSTM models at inference time. This highlights the trade-off between model complexity and computational efficiency, which is crucial for real-time financial applications.
+
+### Experiment Results
+
+#### Training Loss Trajectories
+
+Figure 1 shows the training loss trajectory for AAPL using the LSTM model. The x-axis represents the number of epochs, while the y-axis shows the loss (MSE). This plot demonstrates the convergence behavior of the model during training.
+
+![Figure 1: AAPL LSTM Training Loss](figures/AAPL_lstm_loss_curve_20250429_124312.png)
+
+Similarly, Figure 2 shows the training loss trajectory for MSFT, highlighting consistent convergence patterns across different stocks.
+
+![Figure 2: MSFT LSTM Training Loss](figures/MSFT_fold1_lstm_loss_curve_20250429_170349.png)
+
+#### Ablation Study Results
+
+Figure 3 presents the ablation study results as a bar chart, showing the impact of varying the number of layers and units on RMSE. The x-axis represents different configurations, while the y-axis shows the RMSE values.
+
+![Figure 3: Ablation Study Bar Chart](figures/comparison_RMSE_20250429_182659.png)
+
+#### Complexity Analysis
+
+Figure 4 illustrates the computational complexity of different models as a scatter plot. The x-axis represents the number of FLOPS, while the y-axis shows the inference time in milliseconds.
+
+![Figure 4: Complexity Scatter Plot](figures/comparison_inference_time_20250429_182204.png)
+
+#### Actual vs. Predicted Prices
+
+Figures 5 and 6 compare the actual vs. predicted prices for AAPL and MSFT, respectively. The x-axis represents the time (in months), while the y-axis shows the stock price in USD. These plots highlight the predictive accuracy of the models.
+
+![Figure 5: AAPL Actual vs. Predicted Prices](figures/AAPL_lstm_predictions_20250429_141539.png)
+
+![Figure 6: MSFT Actual vs. Predicted Prices](figures/MSFT_lstm_predictions_20250429_170820.png)
 
 ### Performance Comparison
 
@@ -246,107 +296,4 @@ These findings contribute to the understanding of applying machine learning to f
 
 ## Code Appendix
 
-For brevity and clarity, we present only key code excerpts that illustrate the core components of our implementation. The complete codebase is available at our [GitHub repository](https://github.com/user/stock-prediction-model).
-
-### LSTM Model Architecture
-
-```python
-class LSTMNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim=50, num_layers=2, dropout=0.2):
-        """Initialize the LSTM network."""
-        super(LSTMNetwork, self).__init__()
-        
-        self.lstm = nn.LSTM(
-            input_size=input_dim,
-            hidden_size=hidden_dim,
-            num_layers=num_layers,
-            batch_first=True,
-            dropout=dropout if num_layers > 1 else 0
-        )
-        
-        self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(hidden_dim, 1)
-        
-    def forward(self, x):
-        """Forward pass through the network."""
-        lstm_out, _ = self.lstm(x)
-        # Get the last time step's output
-        last_time_step = lstm_out[:, -1, :]
-        x = self.dropout(last_time_step)
-        x = self.fc(x)
-        return x
-```
-
-### Transformer Model Architecture
-
-```python
-class TransformerEncoder(nn.Module):
-    def __init__(self, input_dim, d_model=64, nhead=4, num_layers=2, dropout=0.1):
-        super(TransformerEncoder, self).__init__()
-        self.input_projection = nn.Linear(input_dim, d_model)
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model,
-            nhead=nhead,
-            dim_feedforward=d_model*4,
-            dropout=dropout,
-            batch_first=True
-        )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.output_layer = nn.Linear(d_model, 1)
-        
-    def forward(self, x):
-        # x shape: [batch_size, seq_len, features]
-        x = self.input_projection(x)
-        x = self.transformer_encoder(x)
-        # Take the representation of the last token
-        x = x[:, -1, :]
-        return self.output_layer(x)
-```
-
-### Sliding Window Generation Pseudocode
-
-```
-def create_sequences(data, window_size):
-    X = []  # Input sequences
-    y = []  # Target values
-    
-    for i from 0 to (length of data - window_size):
-        # Extract window of size 'window_size' from position i
-        window = data[i:i+window_size]
-        
-        # Target is the next value after the window
-        target = data[i+window_size][closing_price_column]
-        
-        X.append(window)
-        y.append(target)
-    
-    return X, y
-```
-
-### Training with Early Stopping Pseudocode
-
-```
-def train_with_early_stopping(model, train_loader, val_loader, patience=10):
-    best_val_loss = infinity
-    patience_counter = 0
-    
-    for epoch in range(max_epochs):
-        # Train for one epoch
-        train_loss = train_epoch(model, train_loader)
-        
-        # Evaluate on validation set
-        val_loss = validate_epoch(model, val_loader)
-        
-        # Check early stopping condition
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            patience_counter = 0
-            save_model(model)  # Save the best model
-        else:
-            patience_counter += 1
-            
-        if patience_counter >= patience:
-            print(f"Early stopping at epoch {epoch}")
-            break
-    
-    return load_best_model()  # Return the best model
+The complete codebase is available at our [GitHub repository](https://github.com/user/stock-prediction-model).
