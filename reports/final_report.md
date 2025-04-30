@@ -34,7 +34,7 @@ This project develops a comprehensive pipeline for predicting stock market price
 ### Pipeline Overview
 
 Our pipeline follows a structured approach:
-1. **Data Collection**: Historical stock data is retrieved from Yahoo Finance.
+1. **Data Collection**: Historical stock data is retrieved from Kaggle using yfinance (https://www.kaggle.com/datasets/jacksoncrow/stock-market-dataset/data).
 2. **Feature Engineering**: Technical indicators and temporal features are generated to enhance predictive power.
 3. **Model Training**: Linear Regression, LSTM, and Transformer models are trained using time-based cross-validation.
 4. **Evaluation**: Models are evaluated on metrics such as RMSE, MAE, and R², with additional analyses for underfitting/overfitting and computational complexity.
@@ -191,35 +191,41 @@ Table 2 provides a detailed comparison of model complexity metrics with properly
 
 #### Complexity Analysis
 
-Figure 4 illustrates the computational complexity of different models as a scatter plot. The x-axis represents the number of FLOPS, while the y-axis shows the inference time in milliseconds.
+Figure 4 illustrates the computational complexity of different models as a scatter plot. Each point represents a different model architecture, annotated with its configuration.
 
-![Figure 4: Complexity Scatter Plot](../results/figures/comparison_inference_time_20250429_182659.png)
-
-#### Actual vs. Predicted Prices
-
-Figures 5 and 6 compare the actual vs. predicted prices for AAPL and MSFT, respectively. The x-axis represents the time (in months), while the y-axis shows the stock price in USD. These plots highlight the predictive accuracy of the models.
-
-![Figure 5: AAPL Actual vs. Predicted Prices](../results/figures/AAPL_lstm_predictions_20250429_141539.png)
-
-![Figure 6: MSFT Actual vs. Predicted Prices](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
+![Figure 4: Computational Complexity Analysis](../results/figures/comparison_inference_time_20250429_182659.png)
+**Figure 4.** Inference time (ms) vs. FLOPS (×10⁶ operations) for different model architectures. Points are labeled with model type: Linear, LSTM (2×50), LSTM (3×128), LSTM (4×256), and Transformer (2×64). FLOPS were estimated using the methodology described in section 4.2, and inference times were measured on CPU (Intel Core i7-10700K).
 
 ### Experiment Results
 
 #### Training Loss Trajectories
 
-Figure 1 shows the training loss trajectory for AAPL using the LSTM model. The x-axis represents the number of epochs, while the y-axis shows the loss (MSE). This plot demonstrates the convergence behavior of the model during training.
+Figure 1 shows the training and validation loss trajectories for AAPL using the LSTM model. The declining training loss alongside a plateauing validation loss indicates underfitting rather than overfitting.
 
-![Figure 1: AAPL LSTM Training Loss](figures/AAPL_lstm_loss_curve_20250429_124312.png)
+![Figure 1: AAPL LSTM Training and Validation Loss](../models/figures/AAPL_lstm_loss_curve_20250429_124312.png)
+**Figure 1.** Training (blue solid) and validation (orange dashed) MSE loss for AAPL LSTM over 100 epochs with early stopping at epoch 37. The plateau in validation loss after epoch 30 indicates the model's limited capacity to generalize further.
 
-Similarly, Figure 2 shows the training loss trajectory for MSFT, highlighting consistent convergence patterns across different stocks.
+Similarly, Figure 2 shows the training and validation loss trajectories for MSFT, highlighting consistent convergence patterns across different stocks.
 
-![Figure 2: MSFT LSTM Training Loss](figures/MSFT_fold1_lstm_loss_curve_20250429_170349.png)
+![Figure 2: MSFT LSTM Training and Validation Loss](../models/figures/MSFT_fold1_lstm_loss_curve_20250429_170349.png)
+**Figure 2.** Training (blue solid) and validation (orange dashed) MSE loss for MSFT LSTM over 100 epochs with early stopping at epoch 45. This confirms the underfitting pattern observed with AAPL.
 
 #### Ablation Study Results
 
-Figure 3 presents the ablation study results as a bar chart, showing the impact of varying the number of layers and units on RMSE. The x-axis represents different configurations, while the y-axis shows the RMSE values.
+Figure 3 presents the ablation study results as a bar chart, showing the impact of varying the number of layers and units on RMSE. Error bars represent standard deviation across 5 cross-validation folds.
 
-![Figure 3: Ablation Study Bar Chart](figures/comparison_RMSE_20250429_182659.png)
+![Figure 3: Ablation Study Bar Chart](../results/figures/comparison_RMSE_20250429_182659.png)
+**Figure 3.** RMSE (USD) for AAPL stock prediction across LSTM configurations: (L,U) = (1,50), (2,50), (3,50), (4,50), (1,128), (2,128), (3,128), (4,128), where L=layers and U=units. Error bars show ±1 standard deviation across 5 cross-validation folds. Note the diminishing returns with increased model complexity.
+
+#### Actual vs. Predicted Prices
+
+Figures 5 and 6 compare the actual vs. predicted prices for AAPL and MSFT, respectively, on the test set from October 2022 to January 2023.
+
+![Figure 5: AAPL Actual vs. Predicted Prices](../results/figures/AAPL_lstm_predictions_20250429_141539.png)
+**Figure 5.** AAPL test-set closing prices (blue solid) vs. LSTM predictions (orange dashed) from Oct 2022–Jan 2023, RMSE = 12.22 USD. Note the model's tendency to underpredict during price increases and overpredict during decreases.
+
+![Figure 6: MSFT Actual vs. Predicted Prices](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
+**Figure 6.** MSFT test-set closing prices (blue solid) vs. LSTM predictions (orange dashed) from Oct 2022–Jan 2023, RMSE = 16.84 USD. The model demonstrates similar prediction range collapse as observed with AAPL.
 
 ### Performance Comparison
 
