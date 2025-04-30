@@ -1,3 +1,14 @@
+---
+title: "Stock Market Prediction"
+author:
+  - "Rami Razaq"
+  - "Taha Amir"
+  - "Akshnoor Singh"
+date: "April 30, 2025"
+documentclass: acmart
+classoption: sigconf
+---
+
 # Stock Market Prediction
 
 ## Group Members and Individual Contributions
