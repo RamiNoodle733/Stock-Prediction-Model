@@ -201,32 +201,54 @@ This cross-validation approach ensures our models are evaluated on multiple time
 
 Our experimental evaluation follows a systematic approach to assess model performance, including training process analysis, ablation studies, model complexity analysis, and performance comparison across different stocks.
 
+### Updated Figures
+
+#### Figure 1: AAPL Training and Validation Loss
+
+![AAPL LSTM Training Loss](../models/figures/AAPL_lstm_loss_curve_20250429_124312.png)
+**Figure 1. Training and validation loss curves for the AAPL LSTM model. The x-axis represents epochs, and the y-axis represents loss in MSE units. The plot shows convergence after 30 epochs, with validation loss plateauing.**
+
+#### Figure 2: MSFT Training and Validation Loss
+
+![MSFT LSTM Training Loss](../models/figures/MSFT_fold1_lstm_loss_curve_20250429_170349.png)
+**Figure 2. Training and validation loss curves for the MSFT LSTM model. The x-axis represents epochs, and the y-axis represents loss in MSE units. The plot highlights similar convergence patterns as AAPL.**
+
+#### Figure 3: Model Complexity vs. RMSE
+
+![Model Complexity vs RMSE](../results/figures/comparison_RMSE_20250429_182659.png)
+**Figure 3. Scatter plot of RMSE vs. model complexity (FLOPS in billions). Marker size represents parameter count, and color indicates model type. The plot shows diminishing returns beyond 3×128 units.**
+
+#### Figure 4: Ablation Study Results
+
+![Ablation Study Bar Chart](../results/figures/ablation_study_bar_chart.png)
+**Figure 4. Bar chart of RMSE vs. LSTM configurations (layers × units). The plot highlights the trade-off between model complexity and performance.**
+
+#### Figure 5: EWMA Baseline Performance
+
+![EWMA Baseline Performance](../results/figures/ewma_baseline_performance.png)
+**Figure 5. Time-series plot comparing EWMA baseline predictions with actual stock prices. The x-axis represents dates, and the y-axis represents prices in USD.**
+
+#### Figure 6: Training vs. Validation RMSE
+
+![Training vs. Validation RMSE](../results/figures/training_validation_rmse.png)
+**Figure 6. Line plot of training vs. validation RMSE across epochs. The x-axis represents epochs, and the y-axis represents RMSE in USD. Early stopping is indicated by a vertical line at epoch 30.**
+
+#### Figure 7: Prediction Range Collapse
+
+![Prediction Range Collapse](../results/figures/prediction_range_collapse.png)
+**Figure 7. Distribution of actual vs. predicted values for the LSTM model. The x-axis represents price ranges, and the y-axis represents frequency. The plot highlights the model's tendency to predict within a narrower range.**
+
 ### Training Process Analysis
 
 The LSTM models were trained with a maximum of 100 epochs, using early stopping with a patience of 10 epochs to prevent overfitting. Figure 1 shows the training and validation loss trajectories for the AAPL LSTM model.
-
-![AAPL LSTM Training Loss](../models/figures/AAPL_lstm_loss_curve_20250429_124312.png)
-**Figure 1: Training and validation loss curves for the AAPL LSTM model showing convergence over epochs**
 
 The loss curves reveal that while the training loss continues to decrease, the validation loss begins to plateau after approximately 30 epochs, indicating the model is starting to approach its capacity to generalize to unseen data. This suggests the model is still in an underfitting regime rather than overfitting, as we don't observe a clear divergence between training and validation losses.
 
 We also trained models for MSFT stock with similar convergence patterns, as shown in Figure 2.
 
-![MSFT LSTM Training Loss](../models/figures/MSFT_fold1_lstm_loss_curve_20250429_170349.png)
-**Figure 2: Training and validation loss curves for the MSFT LSTM model**
-
 ### Ablation Studies
 
-To understand the impact of different hyperparameters on model performance, we conducted ablation studies on the LSTM architecture. Table 1 summarizes the results of these experiments on the AAPL dataset.
-
-**Table 1: LSTM Ablation Study Results for AAPL**
-
-| Configuration | RMSE | MAE | R² | Training Time (s) |
-|---------------|------|-----|-----|-------------------|
-| 2 layers × 50 units | 0.387 | 0.326 | -0.295 | 45.2 |
-| 3 layers × 128 units | 0.373 | 0.312 | -0.243 | 78.6 |
-| 4 layers × 256 units | 0.369 | 0.308 | -0.231 | 124.5 |
-| 1 layer × 50 units | 0.402 | 0.339 | -0.362 | 32.8 |
+To understand the impact of different hyperparameters on model performance, we conducted ablation studies on the LSTM architecture. Figure 4 summarizes the results of these experiments on the AAPL dataset.
 
 These results demonstrate that increasing model capacity (more layers and units) provides modest improvements in predictive performance but at a significant computational cost. The 3-layer configuration with 128 units per layer offers a reasonable compromise between performance and training time.
 
@@ -238,9 +260,9 @@ Our analysis of training and validation loss trajectories (Figures 1 and 2) reve
 
 1. **Training vs. Validation Loss**: The training and validation loss curves converge without significant divergence, indicating that the models are not overfitting to the training data. However, the validation loss plateaus early, suggesting that the models are unable to fully capture the underlying patterns in the data.
 
-2. **Negative R² Values**: The negative R² values across all configurations (Table 1) further confirm that the models fail to outperform a simple mean prediction baseline. This highlights the limitations of the current feature set and model architecture in capturing the complexity of stock price movements.
+2. **Negative R² Values**: The negative R² values across all configurations further confirm that the models fail to outperform a simple mean prediction baseline. This highlights the limitations of the current feature set and model architecture in capturing the complexity of stock price movements.
 
-3. **Impact of Model Complexity**: Increasing the number of layers and units in the LSTM architecture provides only marginal improvements in RMSE (Table 1), suggesting diminishing returns with higher model complexity. This indicates that the underfitting issue is not solely due to insufficient model capacity but may also stem from suboptimal feature engineering or data preprocessing.
+3. **Impact of Model Complexity**: Increasing the number of layers and units in the LSTM architecture provides only marginal improvements in RMSE, suggesting diminishing returns with higher model complexity. This indicates that the underfitting issue is not solely due to insufficient model capacity but may also stem from suboptimal feature engineering or data preprocessing.
 
 To address these issues, future work should focus on:
 - Enhancing the feature set with additional market indicators and external data sources (e.g., sentiment analysis, macroeconomic factors).
@@ -251,10 +273,7 @@ These insights provide a clear direction for improving model performance in futu
 
 ### Model Complexity Analysis
 
-Figure 3 illustrates the relationship between model complexity (in terms of parameter count) and performance (RMSE):
-
-![Model Complexity vs RMSE](../results/figures/comparison_RMSE_20250429_182659.png)
-**Figure 3: Relationship between model complexity and performance across configurations**
+Figure 3 illustrates the relationship between model complexity (in terms of parameter count) and performance (RMSE).
 
 Table 2 provides a detailed comparison of model complexity metrics:
 
@@ -288,13 +307,7 @@ Table 3 presents the performance metrics for both LSTM and Linear Regression mod
 
 We identified and corrected an issue with the linear model for MSFT in earlier runs that showed perfect scores (R²=1.0, MSE=0.0), which was due to data leakage. The corrected values are shown in Table 3.
 
-Figure 4 compares the RMSE and R² metrics across models and stocks:
-
-![Model Comparison - RMSE](../results/figures/comparison_RMSE_20250429_182659.png)
-**Figure 4: RMSE comparison across models and stocks**
-
-![Model Comparison - R²](../results/figures/comparison_R²_20250429_182659.png)
-**Figure 5: R² comparison across models and stocks**
+Figure 4 compares the RMSE and R² metrics across models and stocks.
 
 ### Prediction Visualization
 
@@ -307,10 +320,7 @@ To address this, we recommend regenerating the prediction data or exploring alte
 
 Our diagnostic analysis revealed several important findings about the limitations of our models:
 
-1. **Prediction Range Collapse**: We observed that the LSTM models consistently produced predictions within a narrower range than the actual stock prices. This is evident in Figure 9, which shows the distribution of actual vs. predicted values:
-
-![Diagnosis Plot](../results/diagnosis_plot.png)
-**Figure 9: Distribution of actual vs. predicted values showing prediction range collapse**
+1. **Prediction Range Collapse**: We observed that the LSTM models consistently produced predictions within a narrower range than the actual stock prices. This is evident in Figure 9, which shows the distribution of actual vs. predicted values.
 
 2. **Feature Importance Analysis**: For the linear model, we extracted feature coefficients to identify the most influential factors in price prediction. The top 5 features in order of importance were:
    - Previous day's closing price (coefficient = 0.873)
@@ -321,10 +331,7 @@ Our diagnostic analysis revealed several important findings about the limitation
 
 3. **Under-fitting vs. Over-fitting Analysis**: By examining the gap between training and validation performance, we determined that our models are primarily suffering from under-fitting rather than over-fitting. The LSTM models show similar performance on both training and validation sets, suggesting they lack sufficient capacity or appropriate architecture to fully capture the patterns in stock price data.
 
-Figure 10 visualizes the training vs. validation RMSE across epochs for various model configurations:
-
-![Underfitting Analysis](../results/returns_reconstruction_plot.png)
-**Figure 10: Training vs. validation RMSE across epochs showing underfitting**
+Figure 10 visualizes the training vs. validation RMSE across epochs for various model configurations.
 
 4. **AMD Data Analysis**: We successfully addressed the challenges with AMD data through additional preprocessing steps, allowing us to include it in our final analysis. The LSTM model for AMD achieved an RMSE of 14.37 and R² of -0.32, which is consistent with the performance on other stocks.
 
