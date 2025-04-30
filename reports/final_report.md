@@ -189,7 +189,19 @@ Table 2 provides a detailed comparison of model complexity metrics with properly
 | LSTM (4×256) | 1,017,857 | 18.42 | 124.5 | 62.0 | 3.94 |
 | Transformer (2×64) | 124,993 | 1.93 | 68.3 | 23.0 | 0.54 |
 
-This analysis reveals that linear models offer significant advantages in computational efficiency, executing 50-60 times faster than even the simplest LSTM models at inference time. This highlights the trade-off between model complexity and computational efficiency, which is crucial for real-time financial applications.
+#### Complexity Analysis
+
+Figure 4 illustrates the computational complexity of different models as a scatter plot. The x-axis represents the number of FLOPS, while the y-axis shows the inference time in milliseconds.
+
+![Figure 4: Complexity Scatter Plot](../results/figures/comparison_inference_time_20250429_182659.png)
+
+#### Actual vs. Predicted Prices
+
+Figures 5 and 6 compare the actual vs. predicted prices for AAPL and MSFT, respectively. The x-axis represents the time (in months), while the y-axis shows the stock price in USD. These plots highlight the predictive accuracy of the models.
+
+![Figure 5: AAPL Actual vs. Predicted Prices](../results/figures/AAPL_lstm_predictions_20250429_141539.png)
+
+![Figure 6: MSFT Actual vs. Predicted Prices](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
 
 ### Experiment Results
 
@@ -208,20 +220,6 @@ Similarly, Figure 2 shows the training loss trajectory for MSFT, highlighting co
 Figure 3 presents the ablation study results as a bar chart, showing the impact of varying the number of layers and units on RMSE. The x-axis represents different configurations, while the y-axis shows the RMSE values.
 
 ![Figure 3: Ablation Study Bar Chart](figures/comparison_RMSE_20250429_182659.png)
-
-#### Complexity Analysis
-
-Figure 4 illustrates the computational complexity of different models as a scatter plot. The x-axis represents the number of FLOPS, while the y-axis shows the inference time in milliseconds.
-
-![Figure 4: Complexity Scatter Plot](figures/comparison_inference_time_20250429_182204.png)
-
-#### Actual vs. Predicted Prices
-
-Figures 5 and 6 compare the actual vs. predicted prices for AAPL and MSFT, respectively. The x-axis represents the time (in months), while the y-axis shows the stock price in USD. These plots highlight the predictive accuracy of the models.
-
-![Figure 5: AAPL Actual vs. Predicted Prices](figures/AAPL_lstm_predictions_20250429_141539.png)
-
-![Figure 6: MSFT Actual vs. Predicted Prices](figures/MSFT_lstm_predictions_20250429_170820.png)
 
 ### Performance Comparison
 
