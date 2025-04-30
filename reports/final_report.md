@@ -6,7 +6,7 @@
   - Developed and implemented the core data preprocessing pipeline in `preprocess.py`
   - Created the model training framework in `train.py` with cross-validation support
   - Implemented the evaluation metrics calculation in `evaluate.py`
-  - Wrote 60% of the codebase including the training infrastructure
+  - Wrote the basis of the codebase including the training infrastructure
   - Contributed to the Literature Review and Methods sections of the report
 
 - **Taha Amir**: 
@@ -312,24 +312,23 @@ Figure 4 compares the RMSE and R² metrics across models and stocks:
 
 ### Prediction Visualization
 
-Figures 6 and 7 show the actual vs. predicted stock prices for AAPL and MSFT using the LSTM model, with properly rescaled dollar values:
+Figures 6 and 7 show the actual vs. predicted stock prices for MSFT and AMD using the LSTM model, with properly rescaled dollar values:
 
-![AAPL LSTM Predictions](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
+![MSFT LSTM Predictions](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
 **Figure 6: MSFT actual vs. predicted prices using LSTM model**
 
-![MSFT LSTM Predictions](../results/figures/MSFT_linear_predictions_20250429_170821.png)
-**Figure 7: MSFT actual vs. predicted prices using Linear Regression**
+![AMD LSTM Predictions](../results/figures/AMD_lstm_predictions_20250429_170821.png)
+**Figure 7: AMD actual vs. predicted prices using LSTM model**
 
-These visualizations reveal that while both models capture the general trend of stock prices, they struggle to predict significant price movements accurately. The LSTM model tends to predict a narrower range of values compared to the actual price fluctuations, suggesting limitations in capturing extreme market events.
-
-### Model Diagnosis Analysis
+![AMD Linear Model Predictions](../results/figures/AMD_linear_true_test_20250430_083558.png)
+**Figure 8: AMD actual vs. predicted prices using Linear Regression model with Ridge regularization**
 
 Our diagnostic analysis revealed several important findings about the limitations of our models:
 
-1. **Prediction Range Collapse**: We observed that the LSTM models consistently produced predictions within a narrower range than the actual stock prices. This is evident in Figure 8, which shows the distribution of actual vs. predicted values:
+1. **Prediction Range Collapse**: We observed that the LSTM models consistently produced predictions within a narrower range than the actual stock prices. This is evident in Figure 9, which shows the distribution of actual vs. predicted values:
 
 ![Diagnosis Plot](../results/diagnosis_plot.png)
-**Figure 8: Distribution of actual vs. predicted values showing prediction range collapse**
+**Figure 9: Distribution of actual vs. predicted values showing prediction range collapse**
 
 2. **Feature Importance Analysis**: For the linear model, we extracted feature coefficients to identify the most influential factors in price prediction. The top 5 features in order of importance were:
    - Previous day's closing price (coefficient = 0.873)
@@ -340,10 +339,10 @@ Our diagnostic analysis revealed several important findings about the limitation
 
 3. **Under-fitting vs. Over-fitting Analysis**: By examining the gap between training and validation performance, we determined that our models are primarily suffering from under-fitting rather than over-fitting. The LSTM models show similar performance on both training and validation sets, suggesting they lack sufficient capacity or appropriate architecture to fully capture the patterns in stock price data.
 
-Figure 9 visualizes the training vs. validation RMSE across epochs for various model configurations:
+Figure 10 visualizes the training vs. validation RMSE across epochs for various model configurations:
 
 ![Underfitting Analysis](../results/returns_reconstruction_plot.png)
-**Figure 9: Training vs. validation RMSE across epochs showing underfitting**
+**Figure 10: Training vs. validation RMSE across epochs showing underfitting**
 
 4. **AMD Data Analysis**: We successfully addressed the challenges with AMD data through additional preprocessing steps, allowing us to include it in our final analysis. The LSTM model for AMD achieved an RMSE of 14.37 and R² of -0.32, which is consistent with the performance on other stocks.
 
@@ -355,11 +354,11 @@ This project has developed and evaluated multiple machine learning models for st
 
 1. **Model Performance Analysis**: Our experiments revealed that linear regression models often performed competitively with LSTM networks despite their simplicity. The LSTM models achieved an average RMSE of 14.53 across all stocks, while linear models achieved 10.51. This counter-intuitive result suggests that the inherent randomness and complexity of stock price movements remain challenging to capture even with sophisticated deep learning approaches.
 
-2. **Prediction Range Collapse**: All implemented LSTM models showed a tendency to predict within a narrower range than actual prices (see Figure 8), suggesting issues with the model's ability to capture extreme price movements. This is a critical limitation for real-world applications where predicting significant market events is particularly valuable.
+2. **Prediction Range Collapse**: All implemented LSTM models showed a tendency to predict within a narrower range than actual prices (see Figure 9), suggesting issues with the model's ability to capture extreme price movements. This is a critical limitation for real-world applications where predicting significant market events is particularly valuable.
 
 3. **Feature Importance Findings**: Our analysis revealed that the most predictive features were recent price history (1-day lag coefficient = 0.873) and short-term moving averages (5-day MA coefficient = 0.412). This aligns with the findings from Chen and Ge [2] regarding the importance of technical indicators, but contradicts their conclusion about the superiority of ensemble methods incorporating these indicators.
 
-4. **Under-fitting vs. Over-fitting Trade-offs**: Through careful analysis of learning curves (Figure 9), we determined that our models primarily suffer from under-fitting rather than over-fitting. Despite experimenting with larger architectures up to 4 layers and 256 units per layer, performance improvements were marginal (RMSE improved by only 0.033), suggesting fundamental limitations in our approach.
+4. **Under-fitting vs. Over-fitting Trade-offs**: Through careful analysis of learning curves (Figure 10), we determined that our models primarily suffer from under-fitting rather than over-fitting. Despite experimenting with larger architectures up to 4 layers and 256 units per layer, performance improvements were marginal (RMSE improved by only 0.033), suggesting fundamental limitations in our approach.
 
 5. **Computational Efficiency Considerations**: Linear models demonstrated significant advantages in training and inference speed (50-60x faster), which could be crucial for real-time trading applications. As shown in Table 2, the LSTM (4×256) configuration required 124.5 seconds for training compared to just 0.8 seconds for linear regression, highlighting the trade-off between model complexity and computational efficiency.
 
@@ -400,3 +399,338 @@ These findings contribute to the understanding of applying machine learning to f
 3. Li, X., Wu, Y., & Zhou, X. (2022). Transformer models for financial time series forecasting. In Proceedings of the International Conference on Machine Learning for Finance (pp. 213-228).
 
 4. Zhang, J., & Wang, W. (2021). Feature engineering for stock market prediction: A comprehensive empirical study. Expert Systems with Applications, 168, 114186.
+
+## Code Appendix
+
+The complete project codebase includes the following key components, organized into data preprocessing, model implementation, training, and evaluation modules.
+
+### Key Code Components
+
+#### 1. Linear Regression Model with Ridge Regularization
+
+```python
+class LinearRegressionModel:
+    """Linear Regression model implementation with Ridge regularization."""
+
+    def __init__(self, alpha=1.0):
+        """Initialize the Ridge Regression model with regularization."""
+        self.model = Ridge(alpha=alpha)
+        self.X_scaler = StandardScaler()
+        self.y_scaler = StandardScaler()
+        self.is_fitted = False
+    
+    def fit(self, X_train, y_train):
+        """Train the Ridge Regression model on the given data."""
+        # Handle both 2D and 3D input data
+        if len(X_train.shape) == 3:
+            # Reshape 3D data to 2D for sklearn
+            n_samples, n_timesteps, n_features = X_train.shape
+            X_train_2d = X_train.reshape(n_samples, n_timesteps * n_features)
+        else:
+            # Already 2D
+            X_train_2d = X_train
+        
+        # Scale the data
+        X_train_scaled = self.X_scaler.fit_transform(X_train_2d)
+        y_train_scaled = self.y_scaler.fit_transform(y_train.reshape(-1, 1)).flatten()
+        
+        # Fit the linear model
+        self.model.fit(X_train_scaled, y_train_scaled)
+        self.is_fitted = True
+        
+        return self
+    
+    def predict(self, X):
+        """Make predictions using the trained model."""
+        if not self.is_fitted:
+            raise ValueError("Model has not been fitted yet. Call fit() first.")
+        
+        # Handle both 2D and 3D input data
+        if len(X.shape) == 3:
+            # Reshape 3D data to 2D for sklearn
+            n_samples, n_timesteps, n_features = X.shape
+            X_2d = X.reshape(n_samples, n_timesteps * n_features)
+        else:
+            # Already 2D
+            X_2d = X
+        
+        # Scale the data
+        X_scaled = self.X_scaler.transform(X_2d)
+        
+        # Make predictions
+        y_pred_scaled = self.model.predict(X_scaled)
+        
+        # Inverse transform to original scale
+        y_pred = self.y_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
+        
+        return y_pred
+```
+
+#### 2. LSTM Model Architecture
+
+```python
+class LSTMNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim=50, num_layers=2, dropout=0.2):
+        """Initialize the LSTM network."""
+        super(LSTMNetwork, self).__init__()
+        
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0
+        )
+        
+        self.dropout = nn.Dropout(dropout)
+        self.fc = nn.Linear(hidden_dim, 1)
+        
+    def forward(self, x):
+        """Forward pass through the network."""
+        lstm_out, _ = self.lstm(x)
+        # Get the last time step's output
+        last_time_step = lstm_out[:, -1, :]
+        x = self.dropout(last_time_step)
+        x = self.fc(x)
+        return x
+
+class LSTMModel:
+    """LSTM model for stock price prediction."""
+    
+    def __init__(self, window_size=20, feature_dim=5, units=50, layers=2, dropout_rate=0.2):
+        """Initialize the LSTM model."""
+        self.window_size = window_size
+        self.feature_dim = feature_dim
+        self.units = units
+        self.layers = layers
+        self.dropout_rate = dropout_rate
+        self.X_scaler = StandardScaler()
+        self.y_scaler = StandardScaler()
+        self.is_fitted = False
+    
+    def build_model(self):
+        """Build the LSTM model architecture."""
+        self.model = LSTMNetwork(
+            input_dim=self.feature_dim,
+            hidden_dim=self.units,
+            num_layers=self.layers,
+            dropout=self.dropout_rate
+        )
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        self.criterion = nn.MSELoss()
+        return self.model
+```
+
+#### 3. Data Preprocessing and Time Series Splitting
+
+```python
+def load_data(symbol, data_dir):
+    """
+    Load processed data for a specific stock symbol.
+    
+    Args:
+        symbol (str): Stock symbol
+        data_dir (str): Directory containing the processed data
+        
+    Returns:
+        tuple: X features, y targets, dates array
+    """
+    # Load the processed data file
+    data_file = os.path.join(data_dir, f"{symbol}_processed.npz")
+    data = np.load(data_file)
+    
+    X = data['features']
+    y = data['targets']
+    dates = data['dates']
+    
+    return X, y, dates
+
+def split_data(X, y, dates, time_based=True, train_size=0.7, val_size=0.15):
+    """
+    Split data into training, validation, and test sets.
+    
+    Args:
+        X (numpy.ndarray): Features array
+        y (numpy.ndarray): Targets array
+        dates (numpy.ndarray): Dates array
+        time_based (bool): Whether to use time-based splitting (True) or random (False)
+        train_size (float): Proportion of data for training
+        val_size (float): Proportion of data for validation
+        
+    Returns:
+        tuple: X_train, X_val, X_test, y_train, y_val, y_test, dates_train, dates_val, dates_test
+    """
+    if time_based:
+        # Time-based split (preserves temporal order)
+        train_idx = int(len(X) * train_size)
+        val_idx = int(len(X) * (train_size + val_size))
+        
+        X_train, X_val, X_test = X[:train_idx], X[train_idx:val_idx], X[val_idx:]
+        y_train, y_val, y_test = y[:train_idx], y[train_idx:val_idx], y[val_idx:]
+        dates_train, dates_val, dates_test = dates[:train_idx], dates[train_idx:val_idx], dates[val_idx:]
+    else:
+        # Random split (note: not recommended for time series data)
+        X_train, X_temp, y_train, y_temp, idx_train, idx_temp = train_test_split(
+            X, y, np.arange(len(X)), test_size=(1 - train_size), random_state=42
+        )
+        
+        # Further split the temp set into validation and test
+        val_ratio = val_size / (1 - train_size)
+        X_val, X_test, y_val, y_test, idx_val, idx_test = train_test_split(
+            X_temp, y_temp, idx_temp, test_size=(1 - val_ratio), random_state=42
+        )
+        
+        dates_train = dates[idx_train]
+        dates_val = dates[idx_val]
+        dates_test = dates[idx_test]
+    
+    return X_train, X_val, X_test, y_train, y_val, y_test, dates_train, dates_val, dates_test
+```
+
+#### 4. Feature Engineering Pipeline
+
+```python
+def engineer_features(df):
+    """
+    Create technical indicators and other features for stock price prediction.
+    
+    Args:
+        df (pd.DataFrame): DataFrame with OHLCV data
+        
+    Returns:
+        pd.DataFrame: DataFrame with added features
+    """
+    # Create a copy to avoid modifying the original dataframe
+    df = df.copy()
+    
+    # Price-based features
+    df['return'] = df['Close'].pct_change()
+    df['log_return'] = np.log(df['Close'] / df['Close'].shift(1))
+    
+    # Simple Moving Averages
+    for window in [5, 10, 20, 50]:
+        df[f'SMA_{window}'] = df['Close'].rolling(window=window).mean()
+        df[f'SMA_vol_{window}'] = df['Volume'].rolling(window=window).mean()
+    
+    # Exponential Moving Averages
+    for window in [5, 10, 20, 50]:
+        df[f'EMA_{window}'] = df['Close'].ewm(span=window, adjust=False).mean()
+    
+    # Price differences
+    df['price_diff'] = df['Close'].diff()
+    df['price_diff_percentage'] = df['price_diff'] / df['Close'].shift(1) * 100
+    
+    # High-Low range
+    df['daily_range'] = df['High'] - df['Low']
+    df['daily_range_percentage'] = df['daily_range'] / df['Close'].shift(1) * 100
+    
+    # Bollinger Bands (20-day, 2 standard deviations)
+    df['middle_band'] = df['Close'].rolling(window=20).mean()
+    df['std_dev'] = df['Close'].rolling(window=20).std()
+    df['upper_band'] = df['middle_band'] + (df['std_dev'] * 2)
+    df['lower_band'] = df['middle_band'] - (df['std_dev'] * 2)
+    df['bb_width'] = (df['upper_band'] - df['lower_band']) / df['middle_band']
+    
+    # RSI (Relative Strength Index)
+    delta = df['Close'].diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    avg_gain = gain.rolling(window=14).mean()
+    avg_loss = loss.rolling(window=14).mean()
+    rs = avg_gain / avg_loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+    
+    # MACD (Moving Average Convergence Divergence)
+    ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
+    ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = ema_12 - ema_26
+    df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    df['MACD_hist'] = df['MACD'] - df['MACD_signal']
+    
+    # Volume features
+    df['volume_change'] = df['Volume'].pct_change()
+    df['volume_ma_ratio'] = df['Volume'] / df['SMA_vol_5']
+    
+    # Additional technical indicators
+    # ATR (Average True Range)
+    tr1 = df['High'] - df['Low']
+    tr2 = abs(df['High'] - df['Close'].shift(1))
+    tr3 = abs(df['Low'] - df['Close'].shift(1))
+    df['TR'] = pd.DataFrame({'tr1': tr1, 'tr2': tr2, 'tr3': tr3}).max(axis=1)
+    df['ATR'] = df['TR'].rolling(window=14).mean()
+    
+    # On-Balance Volume (OBV)
+    df['OBV'] = (df['Volume'] * ((df['Close'] - df['Close'].shift(1)).ge(0) * 2 - 1)).cumsum()
+    
+    # Day of week (one-hot encoded)
+    df['date'] = pd.to_datetime(df.index)
+    for i in range(5):
+        df[f'day_{i}'] = (df['date'].dt.dayofweek == i).astype(int)
+    
+    # Month indicators
+    for i in range(1, 13):
+        df[f'month_{i}'] = (df['date'].dt.month == i).astype(int)
+    
+    # Drop rows with NaN values (from rolling windows)
+    df.dropna(inplace=True)
+    
+    # Drop the date column (not needed as features)
+    df.drop('date', axis=1, inplace=True)
+    
+    return df
+```
+
+### Evaluation Code
+
+Our evaluation script properly separates training and testing data to ensure realistic performance assessment:
+
+```python
+def load_test_data(symbol, data_dir):
+    """Load ONLY test data for a specific stock symbol."""
+    test_file = os.path.join(data_dir, f"{symbol}_test_scaled.npz")
+    
+    if not os.path.exists(test_file):
+        raise FileNotFoundError(f"Test data file not found for {symbol} in {data_dir}")
+    
+    test_data = np.load(test_file)
+    
+    X_test = test_data['features']
+    y_test = test_data['targets']
+    dates_test = test_data['dates']
+    
+    return X_test, y_test, dates_test
+
+def evaluate_model(model, X_test, y_test, model_type):
+    """Evaluate a model on test data."""
+    # For LSTM models, ensure X_test has the correct shape
+    if model_type == 'lstm' and len(X_test.shape) == 2:
+        X_test = X_test.reshape(X_test.shape[0], 1, X_test.shape[1])
+    
+    # Make predictions
+    y_pred = model.predict(X_test)
+    
+    # Flatten if needed
+    if hasattr(y_pred, 'shape') and len(y_pred.shape) > 1:
+        y_pred = y_pred.flatten()
+    
+    # Flatten y_test if needed
+    if hasattr(y_test, 'shape') and len(y_test.shape) > 1:
+        y_test = y_test.flatten()
+    
+    # Calculate metrics
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    mape = np.mean(np.abs((y_test - y_pred) / np.abs(y_test + 1e-10))) * 100
+    
+    metrics = {
+        'MSE': mse,
+        'RMSE': rmse,
+        'MAE': mae,
+        'R²': r2,
+        'MAPE': mape,
+    }
+    
+    return y_pred, metrics
+```

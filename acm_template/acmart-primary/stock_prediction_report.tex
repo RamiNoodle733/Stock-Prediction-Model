@@ -1,0 +1,61 @@
+\documentclass[sigconf]{acmart}
+
+\title{Stock Market Prediction Using Machine Learning Models}
+
+\author{Rami Razaq}
+\affiliation{
+  \institution{University of Example}
+  \city{City}
+  \country{Country}
+}
+\email{rami@example.edu}
+
+\author{Taha Amir}
+\affiliation{
+  \institution{University of Example}
+  \city{City}
+  \country{Country}
+}
+\email{taha@example.edu}
+
+\author{Akshnoor Singh}
+\affiliation{
+  \institution{University of Example}
+  \city{City}
+  \country{Country}
+}
+\email{akshnoor@example.edu}
+
+\begin{abstract}
+This project explores the application of machine learning models for stock market prediction, focusing on forecasting next-day closing prices for major NASDAQ stocks. We compare traditional linear regression models with advanced deep learning techniques, such as Long Short-Term Memory (LSTM) networks. Our findings highlight the challenges of capturing stock price volatility and the trade-offs between model complexity and computational efficiency. The report includes detailed analyses of model performance, hyperparameter tuning, and computational complexity, providing insights into the potential and limitations of machine learning in financial forecasting.
+\end{abstract}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The stock market is a complex and volatile domain, making accurate predictions a challenging yet valuable task. This project focuses on forecasting next-day closing prices for major NASDAQ stocks using machine learning models. We aim to develop a robust pipeline that incorporates feature engineering, model training, and evaluation to compare traditional and advanced approaches.
+
+\section{Group Members and Individual Contributions}
+\begin{itemize}
+    \item \textbf{Rami Razaq}: Developed the data preprocessing pipeline, created the model training framework, and implemented evaluation metrics.
+    \item \textbf{Taha Amir}: Implemented LSTM and Linear Regression models, developed prediction rescaling and diagnosis tools, and created visualization scripts.
+    \item \textbf{Akshnoor Singh}: Collected data, created visualizations, conducted literature review, and formatted the final report.
+\end{itemize}
+
+\section{Literature Review}
+Our approach is informed by key studies in stock market prediction. Siami-Namini et al. demonstrated the effectiveness of LSTM networks for financial time series forecasting, influencing our choice of deep learning models. Chen and Ge highlighted the importance of technical indicators, which guided our feature engineering. Li et al. explored transformer architectures, providing insights for future work. Zhang and Wang emphasized robust feature selection, aligning with our preprocessing pipeline.
+
+\section{Machine Learning Models and Methods}
+We implemented two main models: Linear Regression as a baseline and LSTM networks for advanced prediction. The Linear Regression model captures simple relationships, while the LSTM model leverages temporal dependencies in stock price data. Hyperparameters were tuned through cross-validation, and models were evaluated using metrics such as RMSE and R².
+
+\section{Experiment Results}
+Our experiments revealed that linear regression models often performed competitively with LSTM networks, highlighting the challenges of capturing stock price volatility. Ablation studies showed the impact of hyperparameters on performance, and complexity analysis demonstrated the trade-offs between model accuracy and computational efficiency. Figures and tables illustrate training loss trajectories, prediction visualizations, and performance comparisons.
+
+\section{Conclusion}
+This project highlights the potential and limitations of machine learning in stock market prediction. While advanced models like LSTM networks offer promise, simpler models often perform comparably, emphasizing the importance of feature engineering. Future work includes exploring transformer architectures, integrating sentiment analysis, and addressing prediction range limitations.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-base}
+
+\end{document}
