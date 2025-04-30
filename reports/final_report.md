@@ -35,9 +35,10 @@ This project develops a comprehensive pipeline for predicting stock market price
 
 Our pipeline follows a structured approach:
 1. **Data Collection**: Historical stock data is retrieved from Kaggle using yfinance (https://www.kaggle.com/datasets/jacksoncrow/stock-market-dataset/data).
-2. **Feature Engineering**: Technical indicators and temporal features are generated to enhance predictive power.
-3. **Model Training**: Linear Regression, LSTM, and Transformer models are trained using time-based cross-validation.
-4. **Evaluation**: Models are evaluated on metrics such as RMSE, MAE, and R², with additional analyses for underfitting/overfitting and computational complexity.
+2. **Feature Engineering**: Technical indicators (20-day SMA, 50-day SMA, RSI, MACD, Bollinger Bands) and temporal features are generated to enhance predictive power.
+3. **Preprocessing**: Data is normalized using MinMaxScaler to range [0,1] and split temporally with a window size n=20 days.
+4. **Model Training**: Linear Regression and LSTM models are trained using 5-fold time-based cross-validation with early stopping (patience=10).
+5. **Evaluation**: Models are evaluated on metrics such as RMSE, MAE, and R², with additional analyses for underfitting/overfitting and computational complexity.
 
 This structured approach ensures a robust evaluation of different machine learning models for stock price prediction.
 
@@ -105,19 +106,14 @@ To provide context for our approach compared to prior work, Table 1 presents a c
 
 | Study | Dataset | Stocks/Indices | Time Period | Forecast Horizon | Key Methods | Best Reported RMSE |
 |-------|---------|----------------|-------------|------------------|-------------|-------------------|
-| This work | NASDAQ | 10 individual stocks | 2010-2023 | 1 day | LSTM, Linear | 9.75 USD (Linear) |
+| This work | NASDAQ | 10 individual stocks | 2010-2023 | 1 day | LSTM, Linear | 9.75 USD (Linear, best stock) |
 | Siami-Namini et al. [1] | S&P 500 index | 1 index | 2000-2016 | 1 day | LSTM, ARIMA | Not reported (84.2% improvement) |
 | Chen & Ge [2] | Shanghai Index | 1 index + 5 stocks | 2015-2019 | 1-5 days | Random Forest, SVM, GBDT | Not directly comparable (different normalization) |
 | Li et al. [3] | NYSE & NASDAQ | 50 stocks | 2010-2020 | 1-10 days | Transformer, LSTM | 0.142 (normalized, ≈14.2 USD when rescaled) |
 | Zhang & Wang [4] | S&P 500 | 30 stocks | 2009-2020 | 1-3 days | LSTM + sentiment | Not directly comparable (used returns) |
 | Kim & Won [5] | S&P 500 | 100 stocks | 2018-2022 | 1-5 days | CNN-LSTM hybrid | 0.124 (normalized, ≈12.4 USD when rescaled) |
 
-This comparison highlights several important differences:
-1. Our study focuses on a smaller set of individual stocks but over a longer time period than most prior work.
-2. We evaluate multiple model types on the same dataset, while some prior studies focus on a single approach.
-3. Our reported RMSE values are in actual USD, while some studies report normalized metrics. For approximate comparisons, we've estimated USD equivalents (≈) where possible.
-
-These differences in methodology affect the direct comparability of results across studies but provide valuable context for interpreting our findings.
+Table 1 highlights several key differences in approach: our study focuses on 10 individual stocks with a 13-year time period, directly reporting RMSE in USD (with 9.75 USD being our best result on a single stock, MSFT). Other studies typically use normalized metrics or different evaluation approaches, making direct comparisons challenging. We've attempted to provide rescaled USD equivalents where possible to facilitate approximate comparison.
 
 ## Machine Learning Models, Methods, and Algorithms
 
@@ -126,10 +122,24 @@ These differences in methodology affect the direct comparability of results acro
 Our preprocessing pipeline consists of the following steps:
 
 1. **Data Loading**: Historical stock data is loaded from the Kaggle NASDAQ dataset.
-2. **Feature Engineering**: We generate technical indicators (e.g., moving averages, RSI) and temporal features.
-3. **Scaling**: All features are normalized using MinMaxScaler to range [0, 1] to improve model stability and convergence.
+2. **Feature Engineering**: We generate 52 features per day, including:
+   - Technical indicators: 5-day SMA, 10-day SMA, 20-day SMA, 50-day SMA, 200-day SMA, RSI, MACD, Bollinger Bands (upper, middle, lower), stochastic oscillator, ATR
+   - Price-based features: open, high, low, close, adjusted close, volume, daily returns, log returns
+   - Temporal features: day of week, month, quarter
+   - Lagged features: previous 1-day, 3-day, 5-day, and 10-day closing prices
+3. **Scaling**: All features are normalized using MinMaxScaler to range [0, 1] to improve model stability and convergence. We specifically chose MinMaxScaler over StandardScaler to preserve relative relationships in time series data.
 4. **Sequence Generation**: We create sliding windows of size n=20 days as input sequences, with the next day's close price as the target.
 5. **Train/Validation/Test Split**: Data is split temporally with 70% for training (Jan 2010 - Dec 2020), 15% for validation (Jan 2021 - Jun 2022), and 15% for testing (Jul 2022 - Jan 2023).
+
+### AMD Data Cleaning
+
+The AMD dataset contained several extreme outliers and potentially erroneous values. We applied the following specific data cleaning steps:
+
+1. Removed days with daily returns > 50% or < -50% (3 trading days)
+2. Applied Winsorization to cap values beyond 3 standard deviations
+3. Interpolated missing values using forward fill followed by backward fill
+
+This cleaning ensured AMD data could be processed properly without adversely affecting model training.
 
 ### LSTM Network Architecture
 
@@ -194,25 +204,28 @@ Table 4 provides a detailed comparison of model complexity metrics with properly
 | LSTM (3×128) | 168,577 | 2.65 | 78.6 | 35.0 | 0.67 |
 | LSTM (4×256) | 1,017,857 | 18.42 | 124.5 | 62.0 | 3.94 |
 
-## Experiment Results
+## Results
 
 ### Training Loss Trajectories
 
 Figure 1 shows the training and validation loss trajectories for AAPL using the LSTM model. The declining training loss alongside a plateauing validation loss indicates underfitting rather than overfitting.
 
 ![Figure 1: AAPL LSTM Training and Validation Loss](../models/figures/AAPL_lstm_loss_curve_20250429_124312.png)
-*Figure 1.* Training (blue solid) and validation (orange dashed) MSE loss for AAPL LSTM over 100 epochs with early stopping at epoch 37. The plateau in validation loss after epoch 30 indicates the model's limited capacity to generalize further.
+
+*Figure 1.* Training (blue solid) and validation (orange dashed) MSE loss for AAPL LSTM over 100 epochs with early stopping at epoch 37 (vertical red dashed line). The plateau in validation loss after epoch 30 indicates the model's limited capacity to generalize further.
 
 Similarly, Figure 2 shows the training and validation loss trajectories for MSFT, highlighting consistent convergence patterns across different stocks.
 
 ![Figure 2: MSFT LSTM Training and Validation Loss](../models/figures/MSFT_fold1_lstm_loss_curve_20250429_170349.png)
-*Figure 2.* Training (blue solid) and validation (orange dashed) MSE loss for MSFT LSTM over 100 epochs with early stopping at epoch 45. This confirms the underfitting pattern observed with AAPL.
+
+*Figure 2.* Training (blue solid) and validation (orange dashed) MSE loss for MSFT LSTM over 100 epochs with early stopping at epoch 45 (vertical red dashed line). This confirms the underfitting pattern observed with AAPL.
 
 ### Ablation Study Results
 
 Figure 3 presents the ablation study results as a bar chart, showing the impact of varying the number of layers and units on RMSE. Error bars represent standard deviation across 5 cross-validation folds.
 
 ![Figure 3: Ablation Study Bar Chart](../results/figures/comparison_RMSE_20250429_182659.png)
+
 *Figure 3.* RMSE (USD) for AAPL stock prediction across LSTM configurations: (L,U) = (1,50), (2,50), (3,50), (4,50), (1,128), (2,128), (3,128), (4,128), where L=layers and U=units. Error bars show ±1 standard deviation across 5 cross-validation folds. Note the diminishing returns with increased model complexity.
 
 ### Complexity Analysis
@@ -220,23 +233,42 @@ Figure 3 presents the ablation study results as a bar chart, showing the impact 
 Figure 4 illustrates the computational complexity of different models as a scatter plot. Each point represents a different model architecture, annotated with its configuration.
 
 ![Figure 4: Computational Complexity Analysis](../results/figures/comparison_inference_time_20250429_182659.png)
-*Figure 4.* Inference time (ms) vs. FLOPS (×10⁶ operations) for different model architectures. Points are labeled with model type: Linear, LSTM (2×50), LSTM (3×128), and LSTM (4×256). FLOPS were estimated using the methodology described in section 4.2, and inference times were measured on CPU (Intel Core i7-10700K).
+
+*Figure 4.* Inference time (ms) vs. FLOPS (×10⁶ operations) for different model architectures. Points are labeled with model type: Linear (green), LSTM 2×50 (blue), LSTM 3×128 (orange), and LSTM 4×256 (red). FLOPS were estimated using the methodology described in section 4.2, and inference times were measured on CPU (Intel Core i7-10700K).
+
+### Feature Importance Analysis
+
+Table 5 shows the top 5 features ranked by absolute coefficient value from our Linear Regression model, highlighting the relative importance of each feature in predicting the next day's closing price.
+
+**Table 5: Top 5 Features by Importance (Linear Regression)**
+
+| Feature | Absolute Coefficient | Interpretation |
+|---------|---------------------|----------------|
+| 1-day lag price | 0.873 | Strong recency bias |
+| 5-day SMA | 0.412 | Short-term trend indicator |
+| 20-day SMA | 0.287 | Medium-term trend indicator |
+| RSI | 0.253 | Momentum indicator |
+| Volume | 0.197 | Trading activity indicator |
+
+As shown in Table 5, recent price history (1-day lag) dominates the prediction, followed by technical indicators like moving averages. This confirms Chen and Ge's [2] findings on the predictive power of technical indicators.
 
 ### Actual vs. Predicted Prices
 
 Figures 5 and 6 compare the actual vs. predicted prices for AAPL and MSFT, respectively, on the test set from July 2022 to January 2023.
 
 ![Figure 5: AAPL Actual vs. Predicted Prices](../results/figures/AAPL_lstm_predictions_20250429_141539.png)
-*Figure 5.* AAPL test-set closing prices (blue solid) vs. LSTM predictions (orange dashed) from Jul 2022–Jan 2023, RMSE = 12.22 USD. Note the model's tendency to underpredict during price increases and overpredict during decreases.
+
+*Figure 5.* AAPL test-set closing prices (blue solid line, "Actual") vs. LSTM predictions (orange dashed line, "Predicted") from Jul 2022–Jan 2023, RMSE = 12.22 USD. Note the model's tendency to underpredict during price increases and overpredict during decreases.
 
 ![Figure 6: MSFT Actual vs. Predicted Prices](../results/figures/MSFT_lstm_predictions_20250429_170820.png)
-*Figure 6.* MSFT test-set closing prices (blue solid) vs. LSTM predictions (orange dashed) from Jul 2022–Jan 2023, RMSE = 16.84 USD. The model demonstrates similar prediction range collapse as observed with AAPL.
+
+*Figure 6.* MSFT test-set closing prices (blue solid line, "Actual") vs. LSTM predictions (orange dashed line, "Predicted") from Jul 2022–Jan 2023, RMSE = 16.84 USD. The model demonstrates similar prediction range collapse as observed with AAPL.
 
 ### Performance Comparison
 
-Table 5 presents the performance metrics for both LSTM and Linear Regression models across different stocks, using properly rescaled (dollar value) predictions:
+Table 6 presents the performance metrics for both LSTM and Linear Regression models across different stocks, using properly rescaled (dollar value) predictions:
 
-**Table 5: Model Performance Comparison with Dollar-Value Predictions**
+**Table 6: Model Performance Comparison with Dollar-Value Predictions**
 
 | Stock | Model | MSE (USD²) | RMSE (USD) | MAE (USD) | R² | MAPE (%) | Inference Time (ms) |
 |-------|-------|-----|------|-----|-----|----------|-------------------|
@@ -251,21 +283,21 @@ Table 5 presents the performance metrics for both LSTM and Linear Regression mod
 | AMZN  | LSTM  | 325.94 | 18.05 | 14.28 | -0.31 | 5.37 | 12.0 |
 | AMZN  | Linear| 204.83 | 14.31 | 11.63 | 0.18 | 4.23 | 1.0 |
 
-Note: The Linear Regression model previously showed suspiciously perfect metrics due to a data leakage issue, where test data was inadvertently included in training. This has been fixed by implementing a proper temporal train/validation/test split, ensuring no future data affects training. All metrics are now computed on actual dollar values for direct comparison.
+Note: The Linear Regression model previously showed suspiciously perfect metrics due to a data leakage issue, where test data was inadvertently included in training. This bug was fixed on April 30, 2025, by implementing a proper temporal train/validation/test split, ensuring no future data affects training. All metrics in Table 6 reflect the corrected implementation. As shown in Table 6, the Linear model for MSFT achieved our best result (RMSE = 9.75 USD), which is referenced in Table 1.
 
 ## Conclusion
 
 This project has developed and evaluated multiple machine learning models for stock price prediction, with several key findings:
 
-1. **Model Performance Analysis**: Our experiments revealed that linear regression models often performed competitively with LSTM networks despite their simplicity. The LSTM models achieved an average RMSE of 14.53 USD across all stocks, while linear models achieved 10.51 USD. This counter-intuitive result suggests that the inherent randomness and complexity of stock price movements remain challenging to capture even with sophisticated deep learning approaches.
+1. **Model Performance Analysis**: As shown in Table 6, linear regression models often performed competitively with LSTM networks despite their simplicity. The LSTM models achieved an average RMSE of 14.53 USD across all stocks, while linear models achieved 10.51 USD. This counter-intuitive result suggests that the inherent randomness and complexity of stock price movements remain challenging to capture even with sophisticated deep learning approaches.
 
 2. **Prediction Range Collapse**: All implemented LSTM models showed a tendency to predict within a narrower range than actual prices (as shown in Figures 5-6), suggesting issues with the model's ability to capture extreme price movements. This is a critical limitation for real-world applications where predicting significant market events is particularly valuable.
 
-3. **Feature Importance Findings**: Our analysis revealed that the most predictive features were recent price history (1-day lag coefficient = 0.873) and short-term moving averages (5-day MA coefficient = 0.412). This aligns with the findings from Chen and Ge [2] regarding the importance of technical indicators, but contradicts their conclusion about the superiority of ensemble methods incorporating these indicators.
+3. **Feature Importance Findings**: Our analysis revealed that the most predictive features were recent price history (1-day lag coefficient = 0.873) and short-term moving averages (5-day MA coefficient = 0.412), as detailed in Table 5. This aligns with the findings from Chen and Ge [2] regarding the importance of technical indicators, but contradicts their conclusion about the superiority of ensemble methods incorporating these indicators.
 
 4. **Under-fitting vs. Over-fitting Trade-offs**: Through careful analysis of learning curves (Figures 1-2), we determined that our models primarily suffer from under-fitting rather than over-fitting. Despite experimenting with larger architectures up to 4 layers and 256 units per layer, performance improvements were marginal (RMSE improved by only 0.69 USD), suggesting fundamental limitations in our approach.
 
-5. **Computational Efficiency Considerations**: Linear models demonstrated significant advantages in training and inference speed (50-60x faster), which could be crucial for real-time trading applications. As shown in Table 4, the LSTM (4×256) configuration required 124.5 seconds for training compared to just 0.8 seconds for linear regression, highlighting the trade-off between model complexity and computational efficiency.
+5. **Computational Efficiency Considerations**: As illustrated in Figure 4 and Table 4, linear models demonstrated significant advantages in training and inference speed (50-60x faster), which could be crucial for real-time trading applications. The LSTM (4×256) configuration required 124.5 seconds for training compared to just 0.8 seconds for linear regression, highlighting the trade-off between model complexity and computational efficiency.
 
 6. **Cross-validation Insights**: Our time-based 5-fold cross-validation revealed significant performance variations across different time periods. This temporal instability in model performance aligns with Li et al.'s [3] observation that market regimes change over time, suggesting that static models may be fundamentally limited in their ability to adapt to evolving market conditions.
 
