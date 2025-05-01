@@ -6,6 +6,7 @@
 \usepackage{multirow}
 \usepackage{amsmath}
 \usepackage{xcolor}
+\usepackage{tabularx}
 
 % Define relative paths for figures
 \graphicspath{{../../models/figures/}{../../results/figures/}}
@@ -14,27 +15,27 @@
 
 \author{Rami Razaq}
 \affiliation{
-  \institution{University of Example}
-  \city{City}
-  \country{Country}
+  \institution{University of Houston}
+  \city{Houston}
+  \country{United States}
 }
-\email{rami@example.edu}
+\email{ramiabdelrazzaq@gmail.com}
 
 \author{Taha Amir}
 \affiliation{
-  \institution{University of Example}
-  \city{City}
-  \country{Country}
+  \institution{University of Houston}
+  \city{Houston}
+  \country{United States}
 }
-\email{taha@example.edu}
+\email{tahashah61@gmail.com}
 
 \author{Akshnoor Singh}
 \affiliation{
-  \institution{University of Example}
-  \city{City}
-  \country{Country}
+  \institution{University of Houston}
+  \city{Houston}
+  \country{United States}
 }
-\email{akshnoor@example.edu}
+\email{akshnoorsingh987@gmail.com}
 
 \begin{abstract}
 This project explores the application of machine learning models for stock market prediction, focusing on forecasting next-day closing prices for major NASDAQ stocks. We compare traditional linear regression models with advanced deep learning techniques, such as Long Short-Term Memory (LSTM) networks. Our findings highlight the challenges of capturing stock price volatility and the trade-offs between model complexity and computational efficiency. The report includes detailed analyses of model performance, hyperparameter tuning, and computational complexity, providing insights into the potential and limitations of machine learning in financial forecasting.
@@ -80,7 +81,7 @@ This project explores the application of machine learning models for stock marke
 
 \section{Introduction and Problem Description}
 
-This project develops a comprehensive pipeline for predicting stock market prices using machine learning techniques. The stock market, characterized by high volatility and complex patterns, presents a challenging yet important domain for predictive modeling. Accurate predictions can provide significant advantages for investment strategies, risk management, and financial decision-making.
+This project develops a comprehensive pipeline for predicting stock market prices using machine learning techniques. The stock market, characterized by high volatility and complex patterns, presents a challenging yet important domain for predictive modeling. Accurate predictions can provide significant advantages for investment strategies, risk management, and financial decision-making. The full source code and implementation details for this project are available on GitHub: \url{https://github.com/RamiNoodle733/stock-prediction-model}.
 
 \subsection{Pipeline Overview}
 
@@ -101,9 +102,10 @@ We focus on forecasting future stock prices based on historical price data for m
 
 Given a window of historical stock data for the past \textit{n} days (in our implementation, \textit{n}=20), we aim to learn a function \textit{f} such that:
 
-\begin{equation}
-f([price_{t-n}, price_{t-n+1}, \ldots, price_{t-1}], [feature_{t-n}, feature_{t-n+1}, \ldots, feature_{t-1}]) = price_t
-\end{equation}
+\begin{align}
+f(&[price_{t-n}, price_{t-n+1}, \ldots, price_{t-1}],\notag\\
+&[feature_{t-n}, feature_{t-n+1}, \ldots, feature_{t-1}]) = price_t
+\end{align}
 
 Where:
 \begin{itemize}
@@ -160,7 +162,7 @@ Kim and Won [5] (2023) proposed a hybrid CNN-LSTM architecture that combines the
 
 To provide context for our approach compared to prior work, Table \ref{tab:lit_comparison} presents a comparison of our methodology with the five cited studies:
 
-\begin{table}[h]
+\begin{table*}[tb]
 \caption{Comparison of Datasets and Methodologies Across Studies}
 \label{tab:lit_comparison}
 \begin{tabular}{p{1.5cm}p{1.2cm}p{1.2cm}p{1cm}p{1.2cm}p{1.2cm}p{1.5cm}}
@@ -175,233 +177,39 @@ Zhang \& Wang [4] & S\&P 500 & 30 stocks & 2009-2020 & 1-3 days & LSTM + sentime
 Kim \& Won [5] & S\&P 500 & 100 stocks & 2018-2022 & 1-5 days & CNN-LSTM hybrid & 0.124 (normalized, $\approx$12.4 USD) \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 Table \ref{tab:lit_comparison} highlights several key differences in approach: our study focuses on 10 individual stocks with a 13-year time period, directly reporting RMSE in USD (with 9.75 USD being our best result on a single stock, MSFT). Other studies typically use normalized metrics or different evaluation approaches, making direct comparisons challenging. We've attempted to provide rescaled USD equivalents where possible to facilitate approximate comparison.
 
-\section{Machine Learning Models, Methods, and Algorithms}
+\section{Experiment Results}
 
-\subsection{Data Preprocessing and Feature Engineering}
-
-Our preprocessing pipeline consists of the following steps:
-
-\begin{enumerate}
-\item \textbf{Data Loading}: Historical stock data is loaded from the Kaggle NASDAQ dataset.
-\item \textbf{Feature Engineering}: We generate 52 features per day, including:
-   \begin{itemize}
-   \item Technical indicators: 5-day SMA, 10-day SMA, 20-day SMA, 50-day SMA, 200-day SMA, RSI, MACD, Bollinger Bands (upper, middle, lower), stochastic oscillator, ATR
-   \item Price-based features: open, high, low, close, adjusted close, volume, daily returns, log returns
-   \item Temporal features: day of week, month, quarter
-   \item Lagged features: previous 1-day, 3-day, 5-day, and 10-day closing prices
-   \end{itemize}
-\item \textbf{Scaling}: All features are normalized using MinMaxScaler to range [0, 1] to improve model stability and convergence. We specifically chose MinMaxScaler over StandardScaler to preserve relative relationships in time series data.
-\item \textbf{Sequence Generation}: We create sliding windows of size n=20 days as input sequences, with the next day's close price as the target.
-\item \textbf{Train/Validation/Test Split}: Data is split temporally with 70\% for training (Jan 2010 - Dec 2020), 15\% for validation (Jan 2021 - Jun 2022), and 15\% for testing (Jul 2022 - Jan 2023).
-\end{enumerate}
-
-\subsection{AMD Data Cleaning}
-
-The AMD dataset contained several extreme outliers and potentially erroneous values. We applied the following specific data cleaning steps:
-
-\begin{enumerate}
-\item Removed days with daily returns > 50\% or < -50\% (3 trading days)
-\item Applied Winsorization to cap values beyond 3 standard deviations
-\item Interpolated missing values using forward fill followed by backward fill
-\end{enumerate}
-
-This cleaning ensured AMD data could be processed properly without adversely affecting model training.
-
-\subsection{LSTM Network Architecture}
-
-Our LSTM model consists of the following components:
-\begin{itemize}
-\item \textbf{Input Layer}: Accepts sequences of size n=20 days with 52 features per day.
-\item \textbf{Hidden Layers}: Configurable number of LSTM layers (1-4) with units ranging from 50 to 256.
-\item \textbf{Output Layer}: Single neuron with linear activation to predict the next day's closing price.
-\item \textbf{Loss Function}: Mean Squared Error (MSE) optimized using Adam optimizer.
-\end{itemize}
-
-\subsection{Ablation Studies and Complexity Analysis}
-
-To understand the impact of different hyperparameters on model performance, we conducted ablation studies on the LSTM architecture. Table \ref{tab:ablation} summarizes the results of these experiments on the AAPL dataset with exact RMSE values:
+We evaluate model performance on next-day closing price prediction using metrics including RMSE, MAE, R², and MAPE. Table \ref{tab:performance} summarizes the results for AAPL, MSFT, and AMD.
 
 \begin{table}[h]
-\caption{LSTM Ablation Study Results for AAPL (RMSE in USD)}
-\label{tab:ablation}
-\begin{tabular}{lcccc}
+\caption{Model Performance Comparison}
+\label{tab:performance}
+\small
+\begin{tabular}{llrrrr}
 \toprule
-\textbf{Units / Layers} & \textbf{1 Layer} & \textbf{2 Layers} & \textbf{3 Layers} & \textbf{4 Layers} \\
+\textbf{Stock} & \textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{R²} & \textbf{MAPE} \\
+ & & \textbf{(USD)} & \textbf{(USD)} & & \textbf{(\%)} \\
 \midrule
-50 units       & 12.52   & 12.22    & 12.07    & 12.01    \\
-128 units      & 12.33   & 12.08    & 11.93    & 11.89    \\
-256 units      & 12.29   & 12.03    & 11.88    & 11.83    \\
+AAPL & Linear & 11.26 & 8.94 & -0.10 & 5.23 \\
+AAPL & LSTM   & 12.22 & 10.05 & -0.29 & 5.23 \\
+MSFT & Linear & 9.75  & 7.68 & 0.58  & 3.12 \\
+MSFT & LSTM   & 16.84 & 12.76 & -0.24 & 4.73 \\
+AMD  & Linear & 10.51 & 8.32 & 0.12  & 3.98 \\
+AMD  & LSTM   & 14.37 & 10.84 & -0.32 & 4.89 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-These results demonstrate that increasing model capacity (more layers and units) provides modest improvements in predictive performance. For instance, moving from a 1-layer, 50-unit LSTM to a 4-layer, 256-unit LSTM only reduces RMSE by 0.69 USD (5.5\%), suggesting diminishing returns from model complexity.
-
-\subsubsection{Mini-Ablation Study: Learning Rates}
-
-To further investigate the impact of hyperparameters, we conducted a mini-ablation study on learning rates for the LSTM model. Table \ref{tab:lr_ablation} summarizes the results:
-
-\begin{table}[h]
-\caption{Learning Rate Ablation Study Results for AAPL (RMSE in USD)}
-\label{tab:lr_ablation}
-\begin{tabular}{lc}
-\toprule
-\textbf{Learning Rate} & \textbf{RMSE} \\
-\midrule
-0.0001 & 12.45 \\
-0.0005 & 12.22 \\
-0.001  & 12.08 \\
-0.005  & 12.35 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-These results indicate that a learning rate of 0.001 provides the best performance, with lower RMSE values compared to other configurations.
-
-\subsection{FLOPS Estimation Methodology}
-
-The FLOPS (Floating Point Operations Per Second) for our models were calculated as follows:
-
-\begin{enumerate}
-\item \textbf{Linear Model}: FLOPS = $2 \times input\_features \times output\_features$  \\
-   Example: 1,053 parameters $\times$ 2 = 2,106 FLOPS
-
-\item \textbf{LSTM Model}: FLOPS = $4 \times [(8 \times hidden\_size^2 + 8 \times input\_size \times hidden\_size) \times num\_layers + hidden\_size \times output\_size]$ \\
-   Example: For a 2-layer, 50-unit LSTM with 52 input features:  \\
-   FLOPS = $4 \times [(8 \times 50^2 + 8 \times 52 \times 50) \times 2 + 50 \times 1]$ = $4 \times [(20,000 + 20,800) \times 2 + 50]$ = $4 \times (81,650)$ = 326,600 FLOPS
-\end{enumerate}
-
-Table \ref{tab:complexity} provides a detailed comparison of model complexity metrics with properly scaled units:
-
-\begin{table}[h]
-\caption{Model Complexity Comparison}
-\label{tab:complexity}
-\begin{tabular}{lccccc}
-\toprule
-\textbf{Model} & \textbf{Parameters} & \textbf{FLOPS (millions)} & \textbf{Training Time (s)} & \textbf{Inference Time (ms)} & \textbf{Memory Usage (MiB)} \\
-\midrule
-Linear Regression & 1,053 & 0.002 & 0.8 & 1.0 & 0.02 \\
-LSTM (2×50) & 25,301 & 0.33 & 45.2 & 12.0 & 0.21 \\
-LSTM (3×128) & 168,577 & 2.65 & 78.6 & 35.0 & 0.67 \\
-LSTM (4×256) & 1,017,857 & 18.42 & 124.5 & 62.0 & 3.94 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\section{Results}
-
-\subsection{Training Loss Trajectories}
-
-Figure \ref{fig:aapl_loss} shows the training and validation loss trajectories for AAPL using the LSTM model. The declining training loss alongside a plateauing validation loss indicates underfitting rather than overfitting.
-
 \begin{figure}[h]
 \centering
-\includegraphics[width=\linewidth]{AAPL_lstm_loss_curve_20250429_124312.png}
-\caption{AAPL LSTM Training and Validation Loss. Training (blue solid) and validation (orange dashed) MSE loss for AAPL LSTM over 100 epochs with early stopping at epoch 37 (vertical red dashed line). The plateau in validation loss after epoch 30 indicates the model's limited capacity to generalize further.}
-\label{fig:aapl_loss}
-\end{figure}
-
-Similarly, Figure \ref{fig:msft_loss} shows the training and validation loss trajectories for MSFT, highlighting consistent convergence patterns across different stocks.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{MSFT_fold1_lstm_loss_curve_20250429_170349.png}
-\caption{MSFT LSTM Training and Validation Loss. Training (blue solid) and validation (orange dashed) MSE loss for MSFT LSTM over 100 epochs with early stopping at epoch 45 (vertical red dashed line). This confirms the underfitting pattern observed with AAPL.}
-\label{fig:msft_loss}
-\end{figure}
-
-\subsection{Ablation Study Results}
-
-Figure \ref{fig:ablation} presents the ablation study results as a bar chart, showing the impact of varying the number of layers and units on RMSE. Error bars represent standard deviation across 5 cross-validation folds.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{comparison_RMSE_20250429_182659.png}
-\caption{Ablation Study Bar Chart. RMSE (USD) for AAPL stock prediction across LSTM configurations: (L,U) = (1,50), (2,50), (3,50), (4,50), (1,128), (2,128), (3,128), (4,128), where L=layers and U=units. Error bars show ±1 standard deviation across 5 cross-validation folds. Note the diminishing returns with increased model complexity.}
-\label{fig:ablation}
-\end{figure}
-
-\subsection{Complexity Analysis}
-
-Figure \ref{fig:complexity} illustrates the computational complexity of different models as a scatter plot. Each point represents a different model architecture, annotated with its configuration.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{comparison_inference_time_20250429_182659.png}
-\caption{Computational Complexity Analysis. Inference time (ms) vs. FLOPS (×10⁶ operations) for different model architectures. Points are labeled with model type: Linear (green), LSTM 2×50 (blue), LSTM 3×128 (orange), and LSTM 4×256 (red). FLOPS were estimated using the methodology described in section 4.2, and inference times were measured on CPU (Intel Core i7-10700K).}
-\label{fig:complexity}
-\end{figure}
-
-\subsection{Feature Importance Analysis}
-
-Table \ref{tab:feature_imp} shows the top 5 features ranked by absolute coefficient value from our Linear Regression model, highlighting the relative importance of each feature in predicting the next day's closing price.
-
-\begin{table}[h]
-\caption{Top 5 Features by Importance (Linear Regression)}
-\label{tab:feature_imp}
-\begin{tabular}{lcp{4cm}}
-\toprule
-\textbf{Feature} & \textbf{Absolute Coefficient} & \textbf{Interpretation} \\
-\midrule
-1-day lag price & 0.873 & Strong recency bias \\
-5-day SMA & 0.412 & Short-term trend indicator \\
-20-day SMA & 0.287 & Medium-term trend indicator \\
-RSI & 0.253 & Momentum indicator \\
-Volume & 0.197 & Trading activity indicator \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-As shown in Table \ref{tab:feature_imp}, recent price history (1-day lag) dominates the prediction, followed by technical indicators like moving averages. This confirms Chen and Ge's [2] findings on the predictive power of technical indicators.
-
-\subsection{Actual vs. Predicted Prices}
-
-Figures \ref{fig:aapl_pred} and \ref{fig:msft_pred} compare the actual vs. predicted prices for AAPL and MSFT, respectively, on the test set from July 2022 to January 2023.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{AAPL_lstm_predictions_20250429_141539.png}
-\caption{AAPL Actual vs. Predicted Prices. AAPL test-set closing prices (blue solid line, "Actual") vs. LSTM predictions (orange dashed line, "Predicted") from Jul 2022–Jan 2023, RMSE = 12.22 USD. Note the model's tendency to underpredict during price increases and overpredict during decreases.}
+\includegraphics[width=\linewidth]{AAPL_predicted_vs_actual.png}
+\caption{AAPL Actual vs. Predicted Prices from July 2022 to January 2023.}
 \label{fig:aapl_pred}
 \end{figure}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{MSFT_lstm_predictions_20250429_170820.png}
-\caption{MSFT Actual vs. Predicted Prices. MSFT test-set closing prices (blue solid line, "Actual") vs. LSTM predictions (orange dashed line, "Predicted") from Jul 2022–Jan 2023, RMSE = 16.84 USD. The model demonstrates similar prediction range collapse as observed with AAPL.}
-\label{fig:msft_pred}
-\end{figure}
-
-\subsection{Performance Comparison}
-
-Table \ref{tab:performance} presents the performance metrics for both LSTM and Linear Regression models across different stocks, using properly rescaled (dollar value) predictions:
-
-\begin{table}[h]
-\caption{Model Performance Comparison with Dollar-Value Predictions}
-\label{tab:performance}
-\begin{tabular}{llcccccc}
-\toprule
-\textbf{Stock} & \textbf{Model} & \textbf{MSE (USD²)} & \textbf{RMSE (USD)} & \textbf{MAE (USD)} & \textbf{R²} & \textbf{MAPE (\%)} & \textbf{Inference (ms)} \\
-\midrule
-AAPL  & LSTM  & 149.32 & 12.22 & 10.05 & -0.29 & 5.23 & 12.0 \\
-AAPL  & Linear& 126.74 & 11.26 & 8.94 & -0.10 & 5.23 & 1.0 \\
-MSFT  & LSTM  & 283.65 & 16.84 & 12.76 & -0.24 & 4.73 & 37.0 \\
-MSFT  & Linear& 95.07 & 9.75 & 7.68 & 0.58 & 3.12 & 2.0 \\
-AMD   & LSTM  & 206.49 & 14.37 & 10.84 & -0.32 & 4.89 & 12.0 \\
-AMD   & Linear& 110.46 & 10.51 & 8.32 & 0.12 & 3.98 & 1.0 \\
-GOOGL & LSTM  & 218.73 & 14.79 & 11.24 & -0.27 & 4.95 & 12.0 \\
-GOOGL & Linear& 142.18 & 11.92 & 9.37 & 0.17 & 4.15 & 1.0 \\
-AMZN  & LSTM  & 325.94 & 18.05 & 14.28 & -0.31 & 5.37 & 12.0 \\
-AMZN  & Linear& 204.83 & 14.31 & 11.63 & 0.18 & 4.23 & 1.0 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Note: The Linear Regression model previously showed suspiciously perfect metrics due to a data leakage issue, where test data was inadvertently included in training. This bug was fixed on April 30, 2025, by implementing a proper temporal train/validation/test split, ensuring no future data affects training. All metrics in Table \ref{tab:performance} reflect the corrected implementation. As shown in Table \ref{tab:performance}, the Linear model for MSFT achieved our best result (RMSE = 9.75 USD), which is referenced in Table \ref{tab:lit_comparison}.
 
 \section{Conclusion}
 
@@ -410,15 +218,13 @@ This project has developed and evaluated multiple machine learning models for st
 \begin{enumerate}
 \item \textbf{Model Performance Analysis}: As shown in Table \ref{tab:performance}, linear regression models often performed competitively with LSTM networks despite their simplicity. The LSTM models achieved an average RMSE of 14.53 USD across all stocks, while linear models achieved 10.51 USD. This counter-intuitive result suggests that the inherent randomness and complexity of stock price movements remain challenging to capture even with sophisticated deep learning approaches.
 
-\item \textbf{Prediction Range Collapse}: All implemented LSTM models showed a tendency to predict within a narrower range than actual prices (as shown in Figures \ref{fig:aapl_pred}-\ref{fig:msft_pred}), suggesting issues with the model's ability to capture extreme price movements. This is a critical limitation for real-world applications where predicting significant market events is particularly valuable.
+\item \textbf{Prediction Range Collapse}: All implemented LSTM models showed a tendency to predict within a narrower range than actual prices, suggesting issues with the model's ability to capture extreme price movements. This is a critical limitation for real-world applications where predicting significant market events is particularly valuable.
 
-\item \textbf{Feature Importance Findings}: Our analysis revealed that the most predictive features were recent price history (1-day lag coefficient = 0.873) and short-term moving averages (5-day MA coefficient = 0.412), as detailed in Table \ref{tab:feature_imp}. This aligns with the findings from Chen and Ge [2] regarding the importance of technical indicators, but contradicts their conclusion about the superiority of ensemble methods incorporating these indicators.
+\item \textbf{Feature Engineering Importance}: The comparable performance of linear and LSTM models suggests that feature engineering may be more important than model architecture for stock price prediction, confirming Zhang and Wang's [4] emphasis on robust feature selection.
 
-\item \textbf{Under-fitting vs. Over-fitting Trade-offs}: Through careful analysis of learning curves (Figures \ref{fig:aapl_loss}-\ref{fig:msft_loss}), we determined that our models primarily suffer from under-fitting rather than over-fitting. Despite experimenting with larger architectures up to 4 layers and 256 units per layer, performance improvements were marginal (RMSE improved by only 0.69 USD), suggesting fundamental limitations in our approach.
+\item \textbf{Under-fitting vs. Over-fitting Trade-offs}: Through careful analysis, we determined that our models primarily suffer from under-fitting rather than over-fitting. Despite experimenting with larger architectures, performance improvements were marginal, suggesting fundamental limitations in our approach.
 
-\item \textbf{Computational Efficiency Considerations}: As illustrated in Figure \ref{fig:complexity} and Table \ref{tab:complexity}, linear models demonstrated significant advantages in training and inference speed (50-60x faster), which could be crucial for real-time trading applications. The LSTM (4×256) configuration required 124.5 seconds for training compared to just 0.8 seconds for linear regression, highlighting the trade-off between model complexity and computational efficiency.
-
-\item \textbf{Cross-validation Insights}: Our time-based 5-fold cross-validation revealed significant performance variations across different time periods. This temporal instability in model performance aligns with Li et al.'s [3] observation that market regimes change over time, suggesting that static models may be fundamentally limited in their ability to adapt to evolving market conditions.
+\item \textbf{Computational Efficiency Considerations}: Linear models demonstrated significant advantages in training and inference speed, which could be crucial for real-time trading applications. The trade-off between model complexity and computational efficiency remains a key consideration.
 \end{enumerate}
 
 \subsection{Theoretical and Practical Implications}
@@ -438,9 +244,9 @@ Our findings have several implications for both research and practical applicati
 Based on our findings and the rubric requirements, we identify specific next steps for future research:
 
 \begin{enumerate}
-\item \textbf{Advanced Model Implementation}: Implement the CNN-LSTM hybrid architecture proposed by Kim and Won [5] to leverage both spatial and temporal pattern recognition. We would specifically use 1D convolutions for feature extraction followed by LSTM layers, with a grid search over kernel sizes [3, 5, 7] and channel dimensions [16, 32, 64].
+\item \textbf{Advanced Model Implementation}: Implement the CNN-LSTM hybrid architecture proposed by Kim and Won [5] to leverage both spatial and temporal pattern recognition.
 
-\item \textbf{Ablation Studies}: Conduct more extensive ablation studies on window size [10, 20, 30, 40] and learning rate [1e-4, 5e-4, 1e-3, 5e-3] to address the underfitting issue. For each configuration, we would document training/validation curves and early stopping points to identify optimal hyperparameters.
+\item \textbf{Ablation Studies}: Conduct more extensive ablation studies on window size and learning rate to address the underfitting issue.
 
 \item \textbf{Feature Engineering Enhancement}: Integrate sentiment analysis from financial news sources using pre-trained language models to capture market sentiment, which could help identify regime changes that our current models miss.
 \end{enumerate}
@@ -450,20 +256,32 @@ These findings contribute to the understanding of applying machine learning to f
 \bibliographystyle{ACM-Reference-Format}
 
 \begin{thebibliography}{5}
+\raggedright
+
 \bibitem{siami}
-Siami-Namini, S., Tavakoli, N., \& Siami Namin, A. (2018). A comparison of ARIMA and LSTM in forecasting time series. In 2018 17th IEEE International Conference on Machine Learning and Applications (ICMLA) (pp. 1394-1401). IEEE.
+Siami-Namini, S., Tavakoli, N., \& Siami Namin, A. (2018).
+\newblock A comparison of ARIMA and LSTM in forecasting time series.
+\newblock In \textit{2018 17th IEEE International Conference on Machine Learning and Applications} (pp. 1394-1401). IEEE.
 
 \bibitem{chen}
-Chen, Y., \& Ge, Z. (2020). Forecasting stock prices using technical analysis and machine learning. Journal of Finance and Data Science, 6(1), 12-25.
+Chen, Y., \& Ge, Z. (2020).
+\newblock Forecasting stock prices using technical analysis and machine learning.
+\newblock \textit{Journal of Finance and Data Science}, 6(1), 12-25.
 
 \bibitem{li}
-Li, X., Wu, Y., \& Zhou, X. (2022). Transformer models for financial time series forecasting. In Proceedings of the International Conference on Machine Learning for Finance (pp. 213-228).
+Li, X., Wu, Y., \& Zhou, X. (2022).
+\newblock Transformer models for financial time series forecasting.
+\newblock In \textit{Proceedings of the International Conference on Machine Learning for Finance} (pp. 213-228).
 
 \bibitem{zhang}
-Zhang, J., \& Wang, W. (2021). Feature engineering for stock market prediction: A comprehensive empirical study. Expert Systems with Applications, 168, 114186.
+Zhang, J., \& Wang, W. (2021).
+\newblock Feature engineering for stock market prediction: A comprehensive empirical study.
+\newblock \textit{Expert Systems with Applications}, 168, 114186.
 
 \bibitem{kim}
-Kim, H. Y., \& Won, C. H. (2023). Hybrid CNN-LSTM architecture for enhanced stock price prediction. IEEE Transactions on Neural Networks and Learning Systems, 34(2), 742-755.
+Kim, H. Y., \& Won, C. H. (2023).
+\newblock Hybrid CNN-LSTM architecture for enhanced stock price prediction.
+\newblock \textit{IEEE Transactions on Neural Networks and Learning Systems}, 34(2), 742-755.
 \end{thebibliography}
 
 \end{document}

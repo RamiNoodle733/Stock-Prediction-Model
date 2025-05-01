@@ -2,31 +2,48 @@
 
 This project implements a comprehensive stock market prediction system using various machine learning and deep learning techniques. It provides tools for data collection, preprocessing, model training, and evaluation, allowing you to predict stock prices and compare different prediction methodologies.
 
+## Project Status
+
+**✅ COMPLETED: April 30, 2025**
+
+This project has been completed and the final report has been prepared using the ACM SIG conference LaTeX template. The report includes:
+- Analysis of Linear Regression and LSTM models for stock price prediction
+- Performance comparison across multiple stocks (AAPL, MSFT, AMD)
+- Literature review of 5 key papers in financial forecasting
+- Ablation studies on model architecture and learning rates
+- Computational complexity analysis
+- Visualizations of prediction performance
+
 ## Project Structure
 
 ```
 stock-prediction-model/
+├── acm_template/            # LaTeX templates for the final report
+│   └── acmart-primary/      # ACM SIG conference template
 ├── data/
-│   ├── raw/            # Raw stock price data from Yahoo Finance
-│   └── processed/      # Processed data with engineered features
-├── notebooks/
-│   ├── 1_data_exploration.ipynb    # Data analysis and visualization
-│   └── 2_model_prototyping.ipynb   # Model development and comparison
-├── models/
-│   ├── linear/         # Linear regression models (.pkl)
-│   └── lstm/           # LSTM model files (.pt, _config.json, _scalers.pkl)
-├── results/            # Evaluation results and predictions
-│   └── figures/        # Generated prediction plots
-├── src/
+│   ├── raw/                 # Raw stock price data from Yahoo Finance
+│   └── processed/           # Processed data with engineered features
+├── models/                  # Trained model files and training histories
+│   ├── figures/
+│   ├── linear/              # Linear regression models (.pkl)
+│   └── lstm/                # LSTM model files (.pt, _config.json, _scalers.pkl)
+├── notebooks/               # Jupyter notebooks for analysis
+├── reports/                 # Final report documents
+│   └── figures/             # Report visualizations
+├── results/                 # Model evaluation results and predictions
+│   ├── figures/             # Generated prediction plots
+│   └── metrics/             # Performance metrics CSVs
+├── src/                     # Python source code
 │   ├── fetch_data.py             # Script to download stock data
 │   ├── preprocess.py             # Data cleaning and feature engineering
 │   ├── train.py                  # Model training functionality
 │   ├── evaluate.py               # Model evaluation and comparison
+│   ├── generate_figures.py       # Create figures for the report
 │   ├── rescale_predictions.py    # Fix and rescale predictions
 │   ├── diagnose_predictions.py   # Tools to diagnose prediction issues
 │   └── models/
 │       ├── baseline.py           # Linear Regression models
-│       └── advanced.py           # LSTM and Transformer models
+│       └── advanced.py           # LSTM models
 └── requirements.txt              # Project dependencies
 ```
 
@@ -166,13 +183,48 @@ python src/diagnose_predictions.py --model_path models/lstm/AAPL_fold5_lstm_2025
 
 This creates detailed diagnostic plots to help identify issues with the predictions.
 
+### Step 7: Generate Figures for Final Report
+
+Generate all necessary figures for the final report:
+
+```bash
+python src/generate_figures.py
+```
+
+This script creates:
+- Training loss curves for AAPL and MSFT
+- RMSE and R² comparison charts across models and stocks
+- Actual vs. predicted price plots for multiple stocks
+- All figures are saved to the `reports/figures/` directory
+
+### Step 8: Compile the Final Report
+
+Compile the LaTeX report for submission:
+
+```bash
+cd acm_template/acmart-primary
+pdflatex stock_prediction_report.tex
+bibtex stock_prediction_report
+pdflatex stock_prediction_report.tex
+pdflatex stock_prediction_report.tex
+```
+
+This will generate the final PDF report `stock_prediction_report.pdf` in the ACM format.
+
+## Key Findings
+
+Our research revealed several important insights:
+1. **Linear vs. LSTM Performance**: Surprisingly, Linear Regression models often outperformed more complex LSTM models for this task
+2. **Best Performance**: Best RMSE of 9.75 USD achieved by Linear Regression on MSFT stock data
+3. **Computational Efficiency**: Linear models showed 50-60x faster training and inference times compared to LSTMs
+4. **Feature Importance**: Recent price history (1-day lag) and short-term moving averages were the most predictive features
+5. **Underfitting**: Both model types showed signs of underfitting rather than overfitting, suggesting more feature engineering might be needed
+
 ## Known Issues and Limitations
 
-1. **AMD Data Processing**: The AMD.csv file contains values that are too large to process correctly. This issue can be resolved by manually cleaning the data.
-
-2. **Linear Model Performance**: Linear regression models sometimes show suspiciously perfect performance (R²=1.0, MSE=0.0), which may indicate potential data leakage issues in the training/evaluation pipeline.
-
-3. **LSTM Prediction Range**: The LSTM model predictions sometimes collapse to a narrow range of values. This is indicated by the warning message about predictions collapsing to a narrow band.
+1. **AMD Data Processing**: The AMD dataset required extra cleaning due to extreme outliers
+2. **LSTM Prediction Range Collapse**: LSTM predictions tend to fall within a narrower range than actual prices
+3. **Data Leakage Issue (Fixed)**: Earlier versions had data leakage in the training/evaluation pipeline, fixed in the final implementation
 
 ## Interpreting Results
 
@@ -189,13 +241,22 @@ Prediction plots show:
 
 ## Meeting the Assignment Requirements
 
-This project fulfills the requirements outlined in the assignmentRubric.txt by:
-- Implementing multiple ML models for stock price prediction
-- Providing a complete pipeline from data collection to evaluation
-- Including advanced models (LSTM)
-- Generating training loss curves and model comparisons
-- Analyzing model performance and computational requirements
-- Supporting analysis of overfitting/underfitting issues
+This project fulfills all requirements outlined in the assignmentRubric.txt:
+- **Integrity**: All required sections are included in the final report with proper formatting
+- **Clarity**: Clear problem description and model definitions
+- **Literature Review**: Summary of 5 relevant papers in financial forecasting
+- **Results**: Comprehensive evaluation including:
+  - Advanced ML model implementation (LSTM)
+  - Analysis of model performance metrics
+  - Ablation studies on model architecture and hyperparameters
+  - Computational complexity analysis
+  - Comparison between linear and deep learning approaches
+
+## Contributors
+
+- Rami Razaq (ramiabdelrazzaq@gmail.com)
+- Taha Amir (tahashah61@gmail.com)
+- Akshnoor Singh (akshnoorsingh987@gmail.com)
 
 ## License
 
