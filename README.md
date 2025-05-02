@@ -254,7 +254,7 @@ This project fulfills all requirements outlined in the assignmentRubric.txt:
 
 ## Contributors
 
-- Rami Razaq (ramiabdelrazzaq@gmail.com)
+- Rami Abdelrazzaq (ramiabdelrazzaq@gmail.com)
 - Taha Amir (tahashah61@gmail.com)
 - Akshnoor Singh (akshnoorsingh987@gmail.com)
 
