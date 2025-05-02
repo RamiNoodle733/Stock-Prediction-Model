@@ -4,7 +4,7 @@ This project implements a comprehensive stock market prediction system using var
 
 ## Project Status
 
-**✅ COMPLETED: April 30, 2025**
+** COMPLETED: April 30, 2025**
 
 This project has been completed and the final report has been prepared using the ACM SIG conference LaTeX template. The report includes:
 - Analysis of Linear Regression and LSTM models for stock price prediction
